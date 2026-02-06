@@ -6,6 +6,10 @@ import MapPage from './pages/MapPage';
 import { AdminLayout } from './components/AdminLayout';
 import WorkPlansPage from './pages/WorkPlansPage';
 import ReportsPage from './pages/ReportsPage';
+import EmployeesPage from './pages/EmployeesPage';
+import CRMLeadsPage from './pages/CRMLeadsPage';
+import ConfigPage from './pages/ConfigPage';
+import AuditLogsPage from './pages/AuditLogsPage';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user, profile, loading } = useAuth();
@@ -46,9 +50,12 @@ function App() {
           >
             <Route index element={<DashboardPage />} />
             <Route path="map" element={<MapPage />} />
+            <Route path="crm-leads" element={<CRMLeadsPage />} />
             <Route path="work-plans" element={<WorkPlansPage />} />
-            <Route path="employees" element={<div className="p-8 text-zinc-500">Employee Management Coming Soon</div>} />
+            <Route path="employees" element={<EmployeesPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="config" element={<ConfigPage />} />
+            <Route path="audit-logs" element={<AuditLogsPage />} />
           </Route>
         </Routes>
       </Router>

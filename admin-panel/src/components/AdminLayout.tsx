@@ -8,7 +8,9 @@ import {
     FileText,
     LogOut,
     Users,
-    Settings
+    Settings,
+    Briefcase,
+    ShieldAlert
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -24,9 +26,12 @@ export const AdminLayout: React.FC = () => {
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: MapIcon, label: 'Live Map', path: '/map' },
+        { icon: Briefcase, label: 'CRM Leads', path: '/crm-leads' },
         { icon: ClipboardList, label: 'Work Plans', path: '/work-plans' },
         { icon: Users, label: 'Employees', path: '/employees' },
         { icon: FileText, label: 'Reports', path: '/reports' },
+        { icon: ShieldAlert, label: 'Audit Logs', path: '/audit-logs' },
+        { icon: Settings, label: 'Config', path: '/config' },
     ];
 
     return (
@@ -49,8 +54,8 @@ export const AdminLayout: React.FC = () => {
                                     key={item.path}
                                     to={item.path}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
-                                            ? 'bg-blue-600/10 text-blue-500 font-medium'
-                                            : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'
+                                        ? 'bg-blue-600/10 text-blue-500 font-medium'
+                                        : 'text-zinc-500 hover:bg-zinc-900 hover:text-zinc-300'
                                         }`}
                                 >
                                     <item.icon className="w-5 h-5" />

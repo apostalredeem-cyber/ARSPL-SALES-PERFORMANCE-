@@ -60,18 +60,140 @@ create table deviations (
   created_at timestamp with time zone default now()
 );
 
+-- 6. Attendance (Duty In/Out)
+create table attendance (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references profiles(id) not null,
+  check_in timestamp with time zone not null,
+  check_out timestamp with time zone,
+  status text check (status in ('active', 'completed')),
+  total_distance float default 0,
+  created_at timestamp with time zone default now()
+);
+
+-- 7. Areas/Zones
+create table areas (
+  id uuid default uuid_generate_v4() primary key,
+  name text not null,
+  boundary geography(POLYGON),
+  assigned_staff_id uuid references profiles(id),
+  created_at timestamp with time zone default now()
+);
+
+-- 8. CRM Leads
+create table leads (
+  id uuid default uuid_generate_v4() primary key,
+  name text not null,
+  area_id uuid references areas(id),
+  created_by_id uuid references profiles(id) not null,
+  assigned_staff_id uuid references profiles(id),
+  status text default 'new',
+  last_visit_date timestamp with time zone,
+  priority_score int default 1,
+  metadata jsonb,
+  created_at timestamp with time zone default now()
+);
+
+-- 9. Visit Reports
+create table visit_reports (
+  id uuid default uuid_generate_v4() primary key,
+  lead_id uuid references leads(id) not null,
+  staff_id uuid references profiles(id) not null,
+  client_name text,
+  lead_type text check (lead_type in ('new', 'follow-up', 'conversion', 'support')),
+  discussion text,
+  outcome text check (outcome in ('interested', 'not-interested', 'follow-up', 'closed')),
+  next_action_date date,
+  photo_url text, -- Supabase Storage
+  location geography(POINT) not null,
+  timestamp timestamp with time zone default now()
+);
+
+-- 10. Audit Logs
+create table audit_logs (
+  id uuid default uuid_generate_v4() primary key,
+  table_name text not null,
+  record_id uuid not null,
+  action text not null,
+  performed_by uuid references profiles(id),
+  old_data jsonb,
+  new_data jsonb,
+  timestamp timestamp with time zone default now()
+);
+
+-- Triggers for CRM Logic
+-- A. Update last_visit_date in leads
+create or replace function update_lead_last_visit()
+returns trigger as $$
+begin
+  update leads set last_visit_date = new.timestamp where id = new.lead_id;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger tr_update_lead_visit
+after insert on visit_reports
+for each row execute procedure update_lead_last_visit();
+
+-- B. Audit Logging Function
+create or replace function process_audit_log()
+returns trigger as $$
+declare
+  old_data jsonb := null;
+  new_data jsonb := null;
+begin
+  if (TG_OP = 'DELETE') then
+      old_data := to_jsonb(OLD);
+  elsif (TG_OP = 'UPDATE') then
+      old_data := to_jsonb(OLD);
+      new_data := to_jsonb(NEW);
+  else
+      new_data := to_jsonb(NEW);
+  end if;
+
+  insert into audit_logs (table_name, record_id, action, performed_by, old_data, new_data)
+  values (TG_TABLE_NAME, coalesce(NEW.id, OLD.id), TG_OP, auth.uid(), old_data, new_data);
+  return null;
+end;
+$$ language plpgsql security definer;
+
+-- Apply Audit to Tables
+create trigger tr_audit_leads after insert or update or delete on leads for each row execute procedure process_audit_log();
+create trigger tr_audit_reports after insert or update or delete on visit_reports for each row execute procedure process_audit_log();
+
 -- RLS Policies (Row Level Security) - Basic Setup
-alter table profiles enable row level security;
-alter table work_plans enable row level security;
-alter table gps_logs enable row level security;
-alter table expenses enable row level security;
-alter table deviations enable row level security;
+alter table attendance enable row level security;
+alter table areas enable row level security;
+alter table leads enable row level security;
+alter table visit_reports enable row level security;
+alter table audit_logs enable row level security;
 
 -- Policies (Simplified for MVP)
 -- Public read for ease (lock down in production)
 create policy "Public profiles are viewable by everyone." on profiles for select using (true);
 create policy "Users can insert their own profiles." on profiles for insert with check (auth.uid() = id);
 create policy "Users can update own profile." on profiles for update using (auth.uid() = id);
+
+-- Attendance Policies
+create policy "Users manage own attendance" on attendance for all using (auth.uid() = user_id);
+create policy "Admins read all attendance" on attendance for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+
+-- CRM Policies
+create policy "Leads access policy" on leads for all using (
+  exists (select 1 from profiles where id = auth.uid() and role = 'admin') OR
+  assigned_staff_id = auth.uid() OR
+  (created_by_id = auth.uid() AND created_at > now() - interval '6 months')
+);
+
+create policy "Admins manage areas" on areas for all using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
+create policy "Staff view assigned areas" on areas for select using (assigned_staff_id = auth.uid());
+
+create policy "Reports access policy" on visit_reports for all using (
+  exists (select 1 from profiles where id = auth.uid() and role = 'admin') OR
+  staff_id = auth.uid()
+);
+
+create policy "Audit logs read by admins" on audit_logs for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
 
 -- Logs: Admin reads all, User inserts own
 create policy "Admins read all logs" on gps_logs for select using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'));
