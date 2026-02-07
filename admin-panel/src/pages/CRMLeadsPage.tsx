@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { User, Briefcase, MapPin, Search, Plus, Filter, MoreHorizontal, UserCheck, Clock } from 'lucide-react';
+import { Briefcase, MapPin, Search, Plus, UserCheck, Clock } from 'lucide-react';
 
 interface Lead {
     id: string;
@@ -25,7 +25,7 @@ const CRMLeadsPage: React.FC = () => {
 
     async function fetchLeads() {
         setLoading(true);
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('leads')
             .select(`
                 *,

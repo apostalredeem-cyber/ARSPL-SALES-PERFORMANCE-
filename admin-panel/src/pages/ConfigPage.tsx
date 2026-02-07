@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Shield, Map, Zap, Sliders, Save, Database, Lock } from 'lucide-react';
+import { Zap, Sliders, Save, Lock } from 'lucide-react';
 
 const ConfigPage: React.FC = () => {
     const [config, setConfig] = useState({
