@@ -15,11 +15,13 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.arspl.salesperformance",
       "config": {
         "googleMapsApiKey": "AIzaSyBDoj8AC0kiklKj8uxWl2QxJqgCmRl6YRE"
       }
     },
     "android": {
+      "package": "com.arspl.mobileapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -38,6 +40,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8bf07c97-4a06-4cbc-9914-13147ec13bd8"
+      }
+    }
   }
 }
