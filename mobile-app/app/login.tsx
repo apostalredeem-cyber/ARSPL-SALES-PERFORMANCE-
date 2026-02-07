@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { StyleSheet, View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { LogIn } from 'lucide-react-native';
 
@@ -33,7 +33,11 @@ export default function LoginScreen() {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                     <View style={styles.logoContainer}>
-                        <LogInIcon stroke="white" size={32} />
+                        <Image
+                            source={require('../assets/logo.png')}
+                            style={styles.logo}
+                            resizeMode="contain"
+                        />
                     </View>
                     <Text style={styles.title}>Welcome Back</Text>
                     <Text style={styles.subtitle}>Sign in to start tracking your day</Text>
@@ -108,18 +112,23 @@ const styles = StyleSheet.create({
         marginBottom: 40,
     },
     logoContainer: {
-        width: 64,
-        height: 64,
-        backgroundColor: '#2563eb',
-        borderRadius: 16,
+        width: 120,
+        height: 120,
+        backgroundColor: '#fff',
+        borderRadius: 24,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
-        shadowColor: '#2563eb',
+        marginBottom: 24,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
         elevation: 8,
+        overflow: 'hidden',
+    },
+    logo: {
+        width: '100%',
+        height: '100%',
     },
     title: {
         fontSize: 24,
