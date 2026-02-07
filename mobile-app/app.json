@@ -28,6 +28,17 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBDoj8AC0kiklKj8uxWl2QxJqgCmRl6YRE"
@@ -39,7 +50,14 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ARSPL Tracker to access your location always for duty logs.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ]
     ],
     "extra": {
       "router": {},
