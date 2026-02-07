@@ -9,62 +9,61 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "splash": {
-        "image": "./assets/arspl_logo.png",
-        "resizeMode": "contain",
+      "image": "./assets/arspl_logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.arspl.salesperformance",
+      "config": {
+        "googleMapsApiKey": "AIzaSyBDoj8AC0kiklKj8uxWl2QxJqgCmRl6YRE"
+      }
+    },
+    "android": {
+      "package": "com.arspl.mobileapp",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/arspl_logo.png",
         "backgroundColor": "#ffffff"
       },
-      "ios": {
-        "supportsTablet": true,
-        "bundleIdentifier": "com.arspl.salesperformance",
-        "config": {
-          "googleMapsApiKey": "AIzaSyBDoj8AC0kiklKj8uxWl2QxJqgCmRl6YRE"
-        }
-      },
-      "android": {
-        "package": "com.arspl.mobileapp",
-        "adaptiveIcon": {
-          "foregroundImage": "./assets/arspl_logo.png",
-          "backgroundColor": "#ffffff"
-        },
-        "edgeToEdgeEnabled": true,
-        "predictiveBackGestureEnabled": false,
-        "permissions": [
-          "ACCESS_FINE_LOCATION",
-          "ACCESS_COARSE_LOCATION",
-          "ACCESS_BACKGROUND_LOCATION",
-          "CAMERA",
-          "RECORD_AUDIO",
-          "FOREGROUND_SERVICE",
-          "FOREGROUND_SERVICE_LOCATION",
-          "READ_EXTERNAL_STORAGE",
-          "WRITE_EXTERNAL_STORAGE"
-        ],
-        "config": {
-          "googleMaps": {
-            "apiKey": "AIzaSyBDoj8AC0kiklKj8uxWl2QxJqgCmRl6YRE"
-          }
-        }
-      },
-      "web": {
-        "favicon": "./assets/favicon.png"
-      },
-      "plugins": [
-        "expo-secure-store",
-        "expo-router",
-        [
-          "expo-location",
-          {
-            "locationAlwaysAndWhenInUsePermission": "Allow ARSPL Tracker to access your location always for duty logs.",
-            "isAndroidBackgroundLocationEnabled": true
-          }
-        ]
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
       ],
-      "extra": {
-        "router": {},
-        "eas": {
-          "projectId": "8bf07c97-4a06-4cbc-9914-13147ec13bd8"
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBDoj8AC0kiklKj8uxWl2QxJqgCmRl6YRE"
         }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ARSPL Tracker to access your location always for duty logs.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8bf07c97-4a06-4cbc-9914-13147ec13bd8"
       }
     }
   }
+}
