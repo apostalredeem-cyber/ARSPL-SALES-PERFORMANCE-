@@ -5,6 +5,7 @@ import { useTracking } from '../src/hooks/useTracking';
 import { useAttendance } from '../src/hooks/useAttendance';
 import { MapPin, Power, Map as MapIcon, ClipboardList, LogOut, Clock, Briefcase, Sparkles } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import FaceRecognition from '../src/components/FaceRecognition';
 
 const MapPinIcon = MapPin as any;
 const PowerIcon = Power as any;
@@ -20,6 +21,7 @@ export default function Dashboard() {
     const { profile, signOut } = useAuth();
     const { isTracking, startTracking, stopTracking, error: trackingError } = useTracking();
     const { activeAttendance, clockIn, clockOut, loading: attLoading } = useAttendance();
+    const [faceVisible, setFaceVisible] = React.useState(false);
 
     const handleAuthSignOut = () => {
         Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -33,9 +35,15 @@ export default function Dashboard() {
             await stopTracking();
             if (activeAttendance) await clockOut();
         } else {
-            await startTracking();
-            if (!activeAttendance) await clockIn();
+            // Trigger face recognition instead of direct clock-in
+            setFaceVisible(true);
         }
+    };
+
+    const handleFaceCaptured = async (uri: string) => {
+        setFaceVisible(false);
+        await startTracking();
+        await clockIn(uri);
     };
 
     return (
@@ -129,6 +137,12 @@ export default function Dashboard() {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            <FaceRecognition
+                visible={faceVisible}
+                onClose={() => setFaceVisible(false)}
+                onCapture={handleFaceCaptured}
+            />
         </View>
     );
 }

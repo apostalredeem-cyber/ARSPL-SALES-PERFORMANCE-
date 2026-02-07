@@ -27,15 +27,45 @@ export function useAttendance() {
         setLoading(false);
     }
 
-    async function clockIn() {
+    async function clockIn(selfieUri?: string) {
         if (!user) return;
+
+        let selfieUrl = null;
+        if (selfieUri) {
+            try {
+                const fileName = `selfie_${user.id}_${Date.now()}.jpg`;
+                const formData = new FormData();
+                formData.append('file', {
+                    uri: selfieUri,
+                    name: fileName,
+                    type: 'image/jpeg',
+                } as any);
+
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('attendance-proofs')
+                    .upload(fileName, formData);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('attendance-proofs')
+                    .getPublicUrl(fileName);
+
+                selfieUrl = publicUrl;
+            } catch (err: any) {
+                console.error('Selfie upload failed:', err);
+                // Continue with clock-in even if selfie upload fails, or block it? 
+                // For now, let's just log and continue or block based on requirements.
+            }
+        }
 
         const { data, error } = await (supabase as any)
             .from('attendance')
             .insert({
                 user_id: user.id,
                 check_in: new Date().toISOString(),
-                status: 'active'
+                status: 'active',
+                selfie_url: selfieUrl
             })
             .select()
             .single();
