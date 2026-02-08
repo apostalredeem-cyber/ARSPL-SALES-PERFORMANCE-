@@ -5,7 +5,20 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY')
+    const errorMsg = `
+    ❌ Supabase Configuration Error
+    
+    Missing required environment variables:
+    ${!supabaseUrl ? '- VITE_SUPABASE_URL' : ''}
+    ${!supabaseAnonKey ? '- VITE_SUPABASE_ANON_KEY' : ''}
+    
+    For local development: Create a .env file in the admin-panel directory
+    For Netlify deployment: Add these variables in Site configuration → Environment variables
+    `
+    console.error(errorMsg)
+    throw new Error('Missing Supabase configuration. Check console for details.')
 }
 
-export const supabase = createClient<Database>(supabaseUrl || '', supabaseAnonKey || '')
+console.log('✅ Supabase client initialized successfully')
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)

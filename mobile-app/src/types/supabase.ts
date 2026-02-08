@@ -160,6 +160,38 @@ export interface Database {
                     created_at?: string
                 }
             }
+            attendance: {
+                Row: {
+                    id: string
+                    user_id: string
+                    check_in: string
+                    check_out: string | null
+                    status: 'active' | 'completed'
+                    selfie_url: string | null
+                    total_distance: number
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    check_in: string
+                    check_out?: string | null
+                    status?: 'active' | 'completed'
+                    selfie_url?: string | null
+                    total_distance?: number
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    check_in?: string
+                    check_out?: string | null
+                    status?: 'active' | 'completed'
+                    selfie_url?: string | null
+                    total_distance?: number
+                    created_at?: string
+                }
+            }
         }
     }
 }

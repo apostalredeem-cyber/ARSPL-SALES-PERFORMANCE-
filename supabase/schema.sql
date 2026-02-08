@@ -67,6 +67,7 @@ create table attendance (
   check_in timestamp with time zone not null,
   check_out timestamp with time zone,
   status text check (status in ('active', 'completed')),
+  selfie_url text, -- Photo proof for clock-in
   total_distance float default 0,
   created_at timestamp with time zone default now()
 );
