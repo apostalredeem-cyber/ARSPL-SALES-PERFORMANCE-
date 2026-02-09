@@ -10,7 +10,11 @@ import {
     Users,
     Settings,
     Briefcase,
-    ShieldAlert
+    ShieldAlert,
+    TrendingUp,
+    Award,
+    Trophy,
+    MapPin
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -27,11 +31,14 @@ export const AdminLayout: React.FC = () => {
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: MapIcon, label: 'Live Map', path: '/map' },
         { icon: Briefcase, label: 'CRM Leads', path: '/crm-leads' },
+        { icon: TrendingUp, label: 'Sales Pipeline', path: '/pipeline' },
+        { icon: Award, label: 'Staff Performance', path: '/performance' },
+        { icon: Trophy, label: 'Monthly Leaderboard', path: '/leaderboard' },
         { icon: ClipboardList, label: 'Work Plans', path: '/work-plans' },
+        { icon: MapPin, label: 'Travel Summary', path: '/travel' },
         { icon: Users, label: 'Employees', path: '/employees' },
         { icon: FileText, label: 'Reports', path: '/reports' },
         { icon: ShieldAlert, label: 'Audit Logs', path: '/audit-logs' },
-        { icon: Settings, label: 'Config', path: '/config' },
     ];
 
     return (

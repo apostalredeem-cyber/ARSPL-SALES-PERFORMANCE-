@@ -3,11 +3,12 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Alert } from 'rea
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTracking } from '../src/hooks/useTracking';
 import { useAttendance } from '../src/hooks/useAttendance';
-import { MapPin, Power, Map as MapIcon, ClipboardList, LogOut, Clock, Briefcase, Sparkles, TrendingUp, IndianRupee } from 'lucide-react-native';
+import { MapPin, Power, Map as MapIcon, ClipboardList, LogOut, Clock, Briefcase, Sparkles, TrendingUp, IndianRupee, Target } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import FaceRecognition from '../src/components/FaceRecognition';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
 import { useTravelSummary } from '../src/hooks/useTravelSummary';
+import { useLeads } from '../src/hooks/useLeads';
 
 const MapPinIcon = MapPin as any;
 const PowerIcon = Power as any;
@@ -19,6 +20,7 @@ const BriefcaseIcon = Briefcase as any;
 const SparklesIcon = Sparkles as any;
 const TrendingUpIcon = TrendingUp as any;
 const IndianRupeeIcon = IndianRupee as any;
+const TargetIcon = Target as any;
 
 export default function Dashboard() {
     const router = useRouter();
@@ -27,7 +29,14 @@ export default function Dashboard() {
     const { activeAttendance, clockIn, clockOut, loading: attLoading } = useAttendance();
     const { currentPlan, hasActiveWorkPlan, hasTodayWorkPlan, loading: planLoading } = useDailyWorkPlan();
     const { weeklySummary, fetchWeeklySummary } = useTravelSummary();
+    const { leads } = useLeads();
     const [faceVisible, setFaceVisible] = React.useState(false);
+
+    // CRM Metrics
+    const meetings = Array.isArray(currentPlan?.meetings) ? currentPlan.meetings : [];
+    const totalExpectedValue = meetings.reduce((sum: number, m: any) => sum + (parseFloat(m.expected_value) || 0), 0);
+    const completedMeetings = meetings.filter((m: any) => m.status === 'visited').length;
+    const pipelineValue = leads.reduce((sum: number, l: any) => sum + (l.expected_value || 0), 0);
 
     // Check for work plan and show guidance if needed
     const showPlanGuidance = !planLoading && !hasTodayWorkPlan();
@@ -129,6 +138,24 @@ export default function Dashboard() {
                 )}
 
 
+                {/* CRM Metrics Row */}
+                <View style={styles.metricsRow}>
+                    <View style={styles.miniMetric}>
+                        <TrendingUpIcon size={16} color="#3b82f6" />
+                        <View>
+                            <Text style={styles.metricLabel}>PIPELINE</Text>
+                            <Text style={styles.metricValue}>₹{(pipelineValue / 100000).toFixed(1)}L</Text>
+                        </View>
+                    </View>
+                    <View style={styles.miniMetric}>
+                        <TargetIcon size={16} color="#10b981" />
+                        <View>
+                            <Text style={styles.metricLabel}>TODAY'S TARGET</Text>
+                            <Text style={styles.metricValue}>₹{(totalExpectedValue / 1000).toFixed(0)}K</Text>
+                        </View>
+                    </View>
+                </View>
+
                 {/* Weekly Summary Card */}
                 {weeklySummary && (
                     <TouchableOpacity
@@ -203,7 +230,30 @@ export default function Dashboard() {
                         <Text style={styles.cardTitle}>Expenses</Text>
                         <Text style={styles.cardDesc}>Log travel bills</Text>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.card}
+                        onPress={() => router.push('/my-pipeline')}
+                    >
+                        <View style={[styles.iconBox, { backgroundColor: '#8b5cf620' }]}>
+                            <TrendingUpIcon size={24} stroke="#8b5cf6" />
+                        </View>
+                        <Text style={styles.cardTitle}>Pipeline</Text>
+                        <Text style={styles.cardDesc}>Sales track</Text>
+                    </TouchableOpacity>
                 </View>
+
+                {hasTodayWorkPlan() && (
+                    <View style={styles.performanceCard}>
+                        <View style={styles.perfHeader}>
+                            <View>
+                                <Text style={styles.perfTitle}>Today's Plan</Text>
+                                <Text style={styles.perfSubtitle}>{meetings.length} meetings scheduled</Text>
+                            </View>
+                            <Text style={styles.perfValue}>₹{totalExpectedValue.toLocaleString()}</Text>
+                        </View>
+                    </View>
+                )}
             </ScrollView>
 
             <FaceRecognition
@@ -450,6 +500,63 @@ const styles = StyleSheet.create({
     guidanceBadgeText: {
         color: '#fff',
         fontSize: 10,
+        fontWeight: 'bold',
+    },
+    metricsRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 24,
+        gap: 12,
+        marginBottom: 24,
+    },
+    miniMetric: {
+        flex: 1,
+        backgroundColor: '#18181b',
+        borderRadius: 16,
+        padding: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        borderWidth: 1,
+        borderColor: '#27272a',
+    },
+    metricLabel: {
+        color: '#71717a',
+        fontSize: 10,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+    },
+    metricValue: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    performanceCard: {
+        backgroundColor: '#18181b',
+        marginHorizontal: 24,
+        marginTop: 24,
+        borderRadius: 20,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#3b82f630',
+    },
+    perfHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    perfTitle: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    perfSubtitle: {
+        color: '#a1a1aa',
+        fontSize: 12,
+        marginTop: 2,
+    },
+    perfValue: {
+        color: '#10b981',
+        fontSize: 18,
         fontWeight: 'bold',
     },
 });

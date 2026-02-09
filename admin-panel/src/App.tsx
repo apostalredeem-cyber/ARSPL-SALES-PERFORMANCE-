@@ -9,6 +9,9 @@ import WorkPlansPage from './pages/WorkPlansPage';
 import ReportsPage from './pages/ReportsPage';
 import EmployeesPage from './pages/EmployeesPage';
 import CRMLeadsPage from './pages/CRMLeadsPage';
+import SalesPipelinePage from './pages/SalesPipelinePage';
+import StaffPerformancePage from './pages/StaffPerformancePage';
+import MonthlyLeaderboardPage from './pages/MonthlyLeaderboardPage';
 import TravelSummaryPage from './pages/TravelSummaryPage';
 import ConfigPage from './pages/ConfigPage';
 import AuditLogsPage from './pages/AuditLogsPage';
@@ -115,8 +118,12 @@ function App() {
               <Route index element={<DashboardPage />} />
               <Route path="map" element={<MapPage />} />
               <Route path="crm-leads" element={<CRMLeadsPage />} />
+              <Route path="pipeline" element={<SalesPipelinePage />} />
+              <Route path="performance" element={<StaffPerformancePage />} />
+              <Route path="leaderboard" element={<MonthlyLeaderboardPage />} />
               <Route path="work-plans" element={<WorkPlansPage />} />
               <Route path="travel-summary" element={<TravelSummaryPage />} />
+              <Route path="travel" element={<TravelSummaryPage />} />
               <Route path="employees" element={<EmployeesPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="config" element={<ConfigPage />} />

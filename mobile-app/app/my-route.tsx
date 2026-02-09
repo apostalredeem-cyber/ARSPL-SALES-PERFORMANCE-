@@ -4,8 +4,9 @@ import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
-import { Map as MapIcon, Navigation, Plus, MapPin, AlertCircle } from 'lucide-react-native';
+import { Map as MapIcon, Navigation, Plus, MapPin, AlertCircle, MessageSquare, Trash } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useLeads } from '../src/hooks/useLeads';
 
 // Safe Icon Casts
 const MapIconComp = MapIcon as any;
@@ -13,6 +14,7 @@ const NavigationIcon = Navigation as any;
 const PlusIcon = Plus as any;
 const MapPinIcon = MapPin as any;
 const AlertCircleIcon = AlertCircle as any;
+const MessageSquareIcon = MessageSquare as any;
 
 /**
  * GLOBAL ERROR BOUNDARY
@@ -167,7 +169,7 @@ function MyRouteContent() {
     }
 
     // FINAL GUARD: Ensure meetings is always an array for .map()
-    const meetings = Array.isArray(currentPlan?.planned_leads) ? currentPlan.planned_leads : [];
+    const meetings = Array.isArray(currentPlan?.meetings) ? currentPlan.meetings : [];
 
     return (
         <View style={styles.container}>
@@ -175,7 +177,7 @@ function MyRouteContent() {
                 <MapIconComp size={24} color="#3b82f6" />
                 <Text style={styles.title}>My Today's Route</Text>
                 <View style={styles.versionBadge}>
-                    <Text style={styles.versionText}>v1.0.1 SAFE</Text>
+                    <Text style={styles.versionText}>v1.1.0 RELATIONAL</Text>
                 </View>
             </View>
 
@@ -223,15 +225,47 @@ function MyRouteContent() {
 
                     {meetings.length > 0 ? (
                         meetings.map((m: any, idx: number) => (
-                            <View key={`meeting-${idx}`} style={styles.meetingItem}>
+                            <View key={`meeting-${m.id || idx}`} style={styles.meetingItem}>
                                 <View style={styles.meetingBadge}>
                                     <Text style={styles.meetingSeq}>{m?.sequence ?? (idx + 1)}</Text>
                                 </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={styles.meetingName} numberOfLines={1}>
-                                        {m?.name ?? 'Unknown Client'}
-                                    </Text>
+                                <View style={{ flex: 1, gap: 4 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Text style={styles.meetingName} numberOfLines={1}>
+                                            {m?.lead?.name ?? 'Unknown Client'}
+                                        </Text>
+                                        {m.priority && (
+                                            <View style={[styles.priorityBadge, styles[`priorityBadge_${m.priority}`]]}>
+                                                <Text style={styles.priorityText}>{m.priority.toUpperCase()}</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Text style={styles.objectiveText}>{m.objective || 'Intro'}</Text>
+                                        <Text style={styles.objectiveText}>•</Text>
+                                        <Text style={styles.objectiveText}>{m.lead?.client_type || 'Retailer'}</Text>
+                                        <Text style={styles.objectiveText}>•</Text>
+                                        <Text style={[styles.objectiveText, { color: m.status === 'visited' ? '#10b981' : '#a1a1aa' }]}>
+                                            {m.status?.toUpperCase() || 'PENDING'}
+                                        </Text>
+                                    </View>
                                 </View>
+                                {currentPlan?.status === 'active' && m.status !== 'visited' && (
+                                    <TouchableOpacity
+                                        style={styles.reportBtn}
+                                        onPress={() => router.push({
+                                            pathname: '/visit-report',
+                                            params: {
+                                                leadName: m.lead?.name,
+                                                meetingId: m.id,
+                                                workPlanId: currentPlan.id
+                                            }
+                                        })}
+                                    >
+                                        <MessageSquareIcon size={16} color="#3b82f6" />
+                                        <Text style={styles.reportBtnText}>Report</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         ))
                     ) : (
@@ -304,7 +338,15 @@ const styles = StyleSheet.create({
     meetingItem: { backgroundColor: '#18181b', padding: 16, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: '#3b82f6', marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
     meetingBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#3b82f620', justifyContent: 'center', alignItems: 'center' },
     meetingSeq: { color: '#3b82f6', fontWeight: 'bold', fontSize: 13 },
-    meetingName: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    meetingName: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    priorityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+    priorityBadge_low: { backgroundColor: '#10b98120' },
+    priorityBadge_med: { backgroundColor: '#f59e0b20' },
+    priorityBadge_high: { backgroundColor: '#ef444420' },
+    priorityText: { fontSize: 10, fontWeight: 'bold', color: '#a1a1aa' }, // Fallback
+    objectiveText: { color: '#a1a1aa', fontSize: 12 },
+    reportBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#3b82f615', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#3b82f630' },
+    reportBtnText: { color: '#3b82f6', fontSize: 14, fontWeight: '700' },
     emptyState: { padding: 20, alignItems: 'center' },
     emptyStateText: { color: '#71717a', textAlign: 'center' },
     addForm: { marginTop: 20, gap: 12 },

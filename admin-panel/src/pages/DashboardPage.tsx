@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Users, AlertTriangle, TrendingUp, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, AlertTriangle, TrendingUp, Clock, CheckCircle, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface DashboardStats {
@@ -7,6 +8,8 @@ interface DashboardStats {
     activeNow: number;
     deviations: number;
     completionRate: number;
+    pipelineValue: number;
+    revenueWon: number;
 }
 
 interface RecentActivity {
@@ -22,9 +25,12 @@ const DashboardPage: React.FC = () => {
         totalEmployees: 0,
         activeNow: 0,
         deviations: 0,
-        completionRate: 0
+        completionRate: 0,
+        pipelineValue: 0,
+        revenueWon: 0
     });
     const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+    const [topPerformers, setTopPerformers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -48,6 +54,7 @@ const DashboardPage: React.FC = () => {
 
             // Fetch today's deviations
             const today = new Date().toISOString().split('T')[0];
+            const currentMonth = today.slice(0, 7) + '-01';
             const { count: deviationCount } = await (supabase as any)
                 .from('deviations')
                 .select('*', { count: 'exact', head: true })
@@ -80,11 +87,31 @@ const DashboardPage: React.FC = () => {
                 ? Math.round((approvedPlans || 0) / totalPlans * 100)
                 : 0;
 
+            // NEW: Fetch CRM Stats
+            const { data: leadsData } = await (supabase as any)
+                .from('leads')
+                .select('expected_value, status');
+
+            const pipelineValue = leadsData?.reduce((sum: number, l: any) => sum + (Number(l.expected_value) || 0), 0) || 0;
+            const revenueWon = leadsData?.filter((l: any) => l.status === 'Order Won').reduce((sum: number, l: any) => sum + (Number(l.expected_value) || 0), 0) || 0;
+
+            // NEW: Fetch Top Performers for mini-card
+            const { data: performers } = await (supabase as any)
+                .from('monthly_sales_summary')
+                .select(`total_order_value, staff:profiles(full_name)`)
+                .eq('month', currentMonth)
+                .order('total_order_value', { ascending: false })
+                .limit(3);
+
+            setTopPerformers(performers || []);
+
             setStats({
                 totalEmployees: employeeCount || 0,
                 activeNow: activeCount || 0,
                 deviations: deviationCount || 0,
-                completionRate
+                completionRate: 0, // Simplified or recycled
+                pipelineValue,
+                revenueWon
             });
 
             // Transform recent attendance to activity format
@@ -92,13 +119,9 @@ const DashboardPage: React.FC = () => {
                 const activities: RecentActivity[] = recentAttendance.map((att: any) => ({
                     id: att.id,
                     user_name: att.profiles?.full_name || 'Unknown User',
-                    action: 'Checked in',
-                    location: 'Field Location',
-                    timestamp: new Date(att.check_in).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                    })
+                    action: 'Started Duty',
+                    location: 'Field',
+                    timestamp: new Date(att.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 }));
                 setRecentActivity(activities);
             }
@@ -110,10 +133,10 @@ const DashboardPage: React.FC = () => {
     }
 
     const statCards = [
-        { label: 'Total Employees', value: stats.totalEmployees.toString(), icon: Users, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-        { label: 'Active Now', value: stats.activeNow.toString(), icon: Clock, color: 'text-green-500', bg: 'bg-green-500/10' },
-        { label: 'Deviations', value: stats.deviations.toString(), icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' },
-        { label: 'Completion Rate', value: `${stats.completionRate}%`, icon: TrendingUp, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+        { label: 'Active Personnel', value: stats.activeNow.toString(), icon: Clock, color: 'text-green-500', bg: 'bg-green-500/10' },
+        { label: 'Total Pipeline', value: `₹${(stats.pipelineValue / 100000).toFixed(1)}L`, icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+        { label: 'Monthly Won', value: `₹${(stats.revenueWon / 100000).toFixed(1)}L`, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { label: 'Staff Alerts', value: stats.deviations.toString(), icon: AlertTriangle, color: 'text-red-500', bg: 'bg-red-500/10' },
     ];
 
     if (loading) {
@@ -178,37 +201,36 @@ const DashboardPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* System Health */}
+                {/* Top Performers */}
                 <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-                    <h3 className="font-bold text-zinc-200 mb-6">Device Health</h3>
+                    <h3 className="font-bold text-zinc-200 mb-6 flex items-center gap-2">
+                        <Trophy className="w-5 h-5 text-yellow-500" />
+                        Top Sales Performers
+                    </h3>
                     <div className="space-y-6">
-                        <div>
-                            <div className="flex justify-between text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">
-                                <span>GPS Precision</span>
-                                <span>98%</span>
+                        {topPerformers.length > 0 ? (
+                            topPerformers.map((performer, idx) => (
+                                <div key={idx}>
+                                    <div className="flex justify-between text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">
+                                        <span>{performer.staff?.full_name}</span>
+                                        <span>₹{(performer.total_order_value / 1000).toFixed(0)}K</span>
+                                    </div>
+                                    <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full ${idx === 0 ? 'bg-yellow-500' : 'bg-blue-500'} shadow-[0_0_8px_rgba(59,130,246,0.3)]`}
+                                            style={{ width: `${Math.min(100, (performer.total_order_value / (topPerformers[0]?.total_order_value || 1)) * 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-8 text-zinc-600">
+                                <p className="text-xs font-bold uppercase tracking-widest">No Sales Recorded</p>
                             </div>
-                            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                                <div className="w-[98%] h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">
-                                <span>Battery Avg.</span>
-                                <span>64%</span>
-                            </div>
-                            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                                <div className="w-[64%] h-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wide">
-                                <span>Sync Lag</span>
-                                <span>1.2s</span>
-                            </div>
-                            <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                                <div className="w-[15%] h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                            </div>
-                        </div>
+                        )}
+                        <Link to="/leaderboard" className="block text-center text-[10px] font-bold text-blue-500 uppercase tracking-widest hover:text-blue-400 transition-colors pt-4">
+                            View Full Leaderboard →
+                        </Link>
                     </div>
                 </div>
             </div>
