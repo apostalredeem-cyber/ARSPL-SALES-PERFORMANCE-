@@ -33,77 +33,80 @@ const DashboardPage: React.FC = () => {
 
     async function fetchDashboardData() {
         setLoading(true);
+        try {
+            // Fetch total employees
+            const { count: employeeCount } = await (supabase as any)
+                .from('profiles')
+                .select('*', { count: 'exact', head: true });
 
-        // Fetch total employees
-        const { count: employeeCount } = await (supabase as any)
-            .from('profiles')
-            .select('*', { count: 'exact', head: true });
+            // Fetch active attendance (checked in but not checked out)
+            const { count: activeCount } = await (supabase as any)
+                .from('attendance')
+                .select('*', { count: 'exact', head: true })
+                .is('check_out', null)
+                .eq('status', 'active');
 
-        // Fetch active attendance (checked in but not checked out)
-        const { count: activeCount } = await (supabase as any)
-            .from('attendance')
-            .select('*', { count: 'exact', head: true })
-            .is('check_out', null)
-            .eq('status', 'active');
+            // Fetch today's deviations
+            const today = new Date().toISOString().split('T')[0];
+            const { count: deviationCount } = await (supabase as any)
+                .from('deviations')
+                .select('*', { count: 'exact', head: true })
+                .gte('created_at', today);
 
-        // Fetch today's deviations
-        const today = new Date().toISOString().split('T')[0];
-        const { count: deviationCount } = await (supabase as any)
-            .from('deviations')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', today);
+            // Fetch recent attendance for activity feed
+            const { data: recentAttendance } = await (supabase as any)
+                .from('attendance')
+                .select(`
+                    id,
+                    check_in,
+                    profiles:user_id (full_name)
+                `)
+                .order('check_in', { ascending: false })
+                .limit(5);
 
-        // Fetch recent attendance for activity feed
-        const { data: recentAttendance } = await (supabase as any)
-            .from('attendance')
-            .select(`
-                id,
-                check_in,
-                profiles:user_id (full_name)
-            `)
-            .order('check_in', { ascending: false })
-            .limit(5);
+            // Calculate completion rate (work plans approved vs total)
+            const { count: totalPlans } = await (supabase as any)
+                .from('work_plans')
+                .select('*', { count: 'exact', head: true })
+                .gte('date', today);
 
-        // Calculate completion rate (work plans approved vs total)
-        const { count: totalPlans } = await (supabase as any)
-            .from('work_plans')
-            .select('*', { count: 'exact', head: true })
-            .gte('date', today);
+            const { count: approvedPlans } = await (supabase as any)
+                .from('work_plans')
+                .select('*', { count: 'exact', head: true })
+                .gte('date', today)
+                .eq('status', 'approved');
 
-        const { count: approvedPlans } = await (supabase as any)
-            .from('work_plans')
-            .select('*', { count: 'exact', head: true })
-            .gte('date', today)
-            .eq('status', 'approved');
+            const completionRate = totalPlans && totalPlans > 0
+                ? Math.round((approvedPlans || 0) / totalPlans * 100)
+                : 0;
 
-        const completionRate = totalPlans && totalPlans > 0
-            ? Math.round((approvedPlans || 0) / totalPlans * 100)
-            : 0;
+            setStats({
+                totalEmployees: employeeCount || 0,
+                activeNow: activeCount || 0,
+                deviations: deviationCount || 0,
+                completionRate
+            });
 
-        setStats({
-            totalEmployees: employeeCount || 0,
-            activeNow: activeCount || 0,
-            deviations: deviationCount || 0,
-            completionRate
-        });
-
-        // Transform recent attendance to activity format
-        if (recentAttendance) {
-            const activities: RecentActivity[] = recentAttendance.map((att: any) => ({
-                id: att.id,
-                user_name: att.profiles?.full_name || 'Unknown User',
-                action: 'Checked in',
-                location: 'Field Location',
-                timestamp: new Date(att.check_in).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true
-                })
-            }));
-            setRecentActivity(activities);
+            // Transform recent attendance to activity format
+            if (recentAttendance) {
+                const activities: RecentActivity[] = recentAttendance.map((att: any) => ({
+                    id: att.id,
+                    user_name: att.profiles?.full_name || 'Unknown User',
+                    action: 'Checked in',
+                    location: 'Field Location',
+                    timestamp: new Date(att.check_in).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    })
+                }));
+                setRecentActivity(activities);
+            }
+        } catch (err) {
+            console.error('Master Dashboard Error:', err);
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     }
 
     const statCards = [

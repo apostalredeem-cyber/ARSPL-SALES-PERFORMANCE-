@@ -15,16 +15,22 @@ export function useAttendance() {
     async function fetchActiveAttendance() {
         if (!user) return;
         setLoading(true);
-        const { data } = await (supabase as any)
-            .from('attendance')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('status', 'active')
-            .single();
+        try {
+            const { data } = await (supabase as any)
+                .from('attendance')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('status', 'active')
+                .limit(1);
 
-        if (data) setActiveAttendance(data);
-        else setActiveAttendance(null);
-        setLoading(false);
+            if (data && data.length > 0) setActiveAttendance(data[0]);
+            else setActiveAttendance(null);
+        } catch (err) {
+            console.error('Error fetching attendance:', err);
+            setActiveAttendance(null);
+        } finally {
+            setLoading(false);
+        }
     }
 
     async function clockIn(selfieUri?: string) {

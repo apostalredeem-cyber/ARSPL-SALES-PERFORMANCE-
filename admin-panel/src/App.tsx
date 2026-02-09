@@ -9,6 +9,7 @@ import WorkPlansPage from './pages/WorkPlansPage';
 import ReportsPage from './pages/ReportsPage';
 import EmployeesPage from './pages/EmployeesPage';
 import CRMLeadsPage from './pages/CRMLeadsPage';
+import TravelSummaryPage from './pages/TravelSummaryPage';
 import ConfigPage from './pages/ConfigPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 
@@ -115,6 +116,7 @@ function App() {
               <Route path="map" element={<MapPage />} />
               <Route path="crm-leads" element={<CRMLeadsPage />} />
               <Route path="work-plans" element={<WorkPlansPage />} />
+              <Route path="travel-summary" element={<TravelSummaryPage />} />
               <Route path="employees" element={<EmployeesPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="config" element={<ConfigPage />} />

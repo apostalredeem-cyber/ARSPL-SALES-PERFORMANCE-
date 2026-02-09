@@ -2,6 +2,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 function RootLayoutNav() {
     const { user, loading } = useAuth();
@@ -40,8 +41,10 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
     return (
-        <AuthProvider>
-            <RootLayoutNav />
-        </AuthProvider>
+        <ErrorBoundary>
+            <AuthProvider>
+                <RootLayoutNav />
+            </AuthProvider>
+        </ErrorBoundary>
     );
 }

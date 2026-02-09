@@ -17,15 +17,54 @@ export default function ExpensesScreen() {
     const { user } = useAuth();
     const router = useRouter();
     const [amount, setAmount] = useState('');
+    const [expenseType, setExpenseType] = useState('');
+    const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
     const [category, setCategory] = useState('');
     const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const categories = ['Travel', 'Food', 'Stay', 'Fuel', 'Other'];
+    const expenseTypes = [
+        { value: 'travel', label: 'Travel', disabled: true, tooltip: 'Auto-generated from GPS' },
+        { value: 'food', label: 'Food', disabled: false },
+        { value: 'hotel', label: 'Hotel', disabled: false },
+        { value: 'fuel', label: 'Fuel', disabled: false },
+        { value: 'other', label: 'Other', disabled: false },
+    ];
 
     async function submitExpense() {
-        if (!user || !amount) {
-            Alert.alert('Error', 'Please enter an amount.');
+        // Validation
+        if (!user) {
+            Alert.alert('Error', 'You must be logged in to submit expenses.');
+            return;
+        }
+
+        if (!amount || parseFloat(amount) <= 0) {
+            Alert.alert('Validation Error', 'Please enter a valid amount.');
+            return;
+        }
+
+        if (!expenseType) {
+            Alert.alert('Validation Error', 'Please select an expense type.');
+            return;
+        }
+
+        if (expenseType === 'travel') {
+            Alert.alert('Not Allowed', 'Travel expenses are auto-generated from GPS tracking. Please select another expense type.');
+            return;
+        }
+
+        if (!expenseDate) {
+            Alert.alert('Validation Error', 'Please select an expense date.');
+            return;
+        }
+
+        // Prevent backdating more than 7 days
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const selectedDate = new Date(expenseDate);
+
+        if (selectedDate < sevenDaysAgo) {
+            Alert.alert('Validation Error', 'Cannot create expenses older than 7 days.');
             return;
         }
 
@@ -39,19 +78,31 @@ export default function ExpensesScreen() {
                 .insert({
                     user_id: user.id,
                     amount: parseFloat(amount),
-                    category: category || 'General',
+                    expense_type: expenseType,
+                    expense_date: expenseDate,
+                    category: category || null,
                     description,
                     location_tagged: point,
                     status: 'pending',
+                    is_auto_generated: false,
                 });
 
-            if (error) throw error;
+            if (error) {
+                // User-friendly error messages
+                if (error.message.includes('Travel expenses are auto-generated')) {
+                    throw new Error('Travel expenses are calculated automatically from GPS tracking.');
+                } else if (error.message.includes('older than 7 days')) {
+                    throw new Error('Cannot create expenses older than 7 days.');
+                } else {
+                    throw error;
+                }
+            }
 
             Alert.alert('Success', 'Expense submitted successfully!', [
                 { text: 'OK', onPress: () => router.back() }
             ]);
         } catch (err: any) {
-            Alert.alert('Error', err.message);
+            Alert.alert('Error', err.message || 'Failed to submit expense. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -81,18 +132,43 @@ export default function ExpensesScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>CATEGORY</Text>
+                    <Text style={styles.label}>EXPENSE TYPE</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-                        {categories.map(cat => (
+                        {expenseTypes.map(type => (
                             <TouchableOpacity
-                                key={cat}
-                                onPress={() => setCategory(cat)}
-                                style={[styles.categoryTag, category === cat && styles.categoryTagActive]}
+                                key={type.value}
+                                onPress={() => !type.disabled && setExpenseType(type.value)}
+                                style={[
+                                    styles.categoryTag,
+                                    expenseType === type.value && styles.categoryTagActive,
+                                    type.disabled && styles.categoryTagDisabled
+                                ]}
+                                disabled={type.disabled}
                             >
-                                <Text style={[styles.categoryText, category === cat && styles.categoryTextActive]}>{cat}</Text>
+                                <Text style={[
+                                    styles.categoryText,
+                                    expenseType === type.value && styles.categoryTextActive,
+                                    type.disabled && styles.categoryTextDisabled
+                                ]}>
+                                    {type.label}
+                                </Text>
+                                {type.disabled && (
+                                    <Text style={styles.disabledTooltip}>🔒 {type.tooltip}</Text>
+                                )}
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>EXPENSE DATE</Text>
+                    <TextInput
+                        style={styles.dateInput}
+                        value={expenseDate}
+                        onChangeText={setExpenseDate}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor="#52525b"
+                    />
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -154,8 +230,12 @@ const styles = StyleSheet.create({
     categoryScroll: { flexDirection: 'row' },
     categoryTag: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#27272a', borderRadius: 12, marginRight: 10, borderWidth: 1, borderColor: 'transparent' },
     categoryTagActive: { backgroundColor: '#2563eb20', borderColor: '#2563eb' },
+    categoryTagDisabled: { backgroundColor: '#18181b', borderColor: '#27272a', opacity: 0.5 },
     categoryText: { color: '#a1a1aa', fontWeight: '600' },
     categoryTextActive: { color: '#3b82f6' },
+    categoryTextDisabled: { color: '#52525b' },
+    disabledTooltip: { color: '#71717a', fontSize: 9, marginTop: 2 },
+    dateInput: { backgroundColor: '#09090b', borderWidth: 1, borderColor: '#27272a', borderRadius: 16, paddingHorizontal: 20, height: 56, color: '#fff', fontSize: 16 },
     textAreaContainer: { flexDirection: 'row', backgroundColor: '#09090b', borderWidth: 1, borderColor: '#27272a', borderRadius: 16, padding: 16, minHeight: 100 },
     textAreaIcon: { marginTop: 2 },
     textArea: { flex: 1, color: '#fff', fontSize: 16, marginLeft: 12, textAlignVertical: 'top' },
