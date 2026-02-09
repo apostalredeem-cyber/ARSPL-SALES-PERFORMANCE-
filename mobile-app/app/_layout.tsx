@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { SyncEngine } from '../src/components/SyncEngine';
 
 function RootLayoutNav() {
     const { user, loading } = useAuth();
@@ -15,10 +16,8 @@ function RootLayoutNav() {
         const inAuthGroup = segments[0] === 'login';
 
         if (!user && !inAuthGroup) {
-            // Redirect to the login page if the user is not authenticated
             router.replace('/login');
         } else if (user && inAuthGroup) {
-            // Redirect away from the login page if the user is authenticated
             router.replace('/');
         }
     }, [user, loading, segments]);
@@ -32,10 +31,13 @@ function RootLayoutNav() {
     }
 
     return (
-        <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" options={{ title: 'Dashboard' }} />
-            <Stack.Screen name="login" options={{ title: 'Login' }} />
-        </Stack>
+        <>
+            <SyncEngine />
+            <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" options={{ title: 'Dashboard' }} />
+                <Stack.Screen name="login" options={{ title: 'Login' }} />
+            </Stack>
+        </>
     );
 }
 

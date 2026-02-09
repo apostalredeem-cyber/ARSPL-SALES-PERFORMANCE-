@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
-import { useTracking } from '../src/hooks/useTracking';
 import { useLeads } from '../src/hooks/useLeads';
+import { useCRM, Area } from '../src/hooks/useCRM';
 import { Plus, Trash2, MapPin, Clock, Play, ChevronDown } from 'lucide-react-native';
 
 const PlusIcon = Plus as any;
@@ -26,9 +26,9 @@ interface RoutePoint {
 
 export default function DailyWorkPlanScreen() {
     const router = useRouter();
-    const { createWorkPlan, activateWorkPlan, loading, error: planError } = useDailyWorkPlan();
-    const { startTracking } = useTracking();
-    const { leads: availableLeads, loading: leadsLoading } = useLeads();
+    const { createWorkPlan, loading, error: planError } = useDailyWorkPlan();
+    const { leads: assignedLeads } = useLeads();
+    const { areas, fetchLeadsInArea, loading: crmLoading } = useCRM();
 
     const [routePoints, setRoutePoints] = useState<RoutePoint[]>([
         { id: '1', lead_id: '', name: '', sequence: 1, client_type: 'Retailer', objective: 'Intro', expected_value: '', priority: 'med' }
@@ -36,7 +36,12 @@ export default function DailyWorkPlanScreen() {
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('18:00');
     const [submitting, setSubmitting] = useState(false);
-    const [activePicker, setActivePicker] = useState<string | null>(null);
+
+    // UI State for Pickers
+    const [activeAreaPicker, setActiveAreaPicker] = useState<string | null>(null);
+    const [activeLeadPicker, setActiveLeadPicker] = useState<string | null>(null);
+    const [tempLeads, setTempLeads] = useState<Record<string, any[]>>({}); // PointID -> LeadList
+    const [selectedAreaForPoint, setSelectedAreaForPoint] = useState<Record<string, string>>({}); // PointID -> AreaID
 
     // Auto-calculate total expected business value
     const totalValue = routePoints.reduce((sum, p) => sum + (parseFloat(p.expected_value) || 0), 0);
@@ -74,6 +79,22 @@ export default function DailyWorkPlanScreen() {
         setRoutePoints(routePoints.map(p => p.id === id ? { ...p, [field]: value } : p));
     };
 
+    const handleAreaSelect = async (pointId: string, area: Area) => {
+        setSelectedAreaForPoint(prev => ({ ...prev, [pointId]: area.id }));
+        setActiveAreaPicker(null);
+
+        // Reset lead for this point
+        updateRoutePoint(pointId, 'lead_id', '');
+        updateRoutePoint(pointId, 'name', '');
+
+        // Fetch leads for this area
+        const areaLeads = await fetchLeadsInArea(area.id);
+        setTempLeads(prev => ({ ...prev, [pointId]: areaLeads }));
+
+        // Open lead picker automatically for better UX
+        setActiveLeadPicker(pointId);
+    };
+
     const selectLead = (pointId: string, lead: any) => {
         setRoutePoints(routePoints.map(p => p.id === pointId ? {
             ...p,
@@ -82,7 +103,7 @@ export default function DailyWorkPlanScreen() {
             client_type: lead.client_type || p.client_type,
             expected_value: lead.expected_value?.toString() || p.expected_value
         } : p));
-        setActivePicker(null);
+        setActiveLeadPicker(null);
     };
 
     const handleActivatePlan = async () => {
@@ -118,37 +139,9 @@ export default function DailyWorkPlanScreen() {
                 return;
             }
 
-            // fetchTodayPlan is called inside createWorkPlan in hook
-            // We need the ID for activation, currentPlan should be updated
-            // But activation usually happens on the current today's plan
-            // Let's refetch or check state. Actually hook createWorkPlan returns Boolean/True on success now.
-
-            // Re-fetch handled by hook. We might need a small delay or check currentPlan.
-            // Simplified: fetchTodayPlan handles setting currentPlan.
-
-            // Wait a moment for state sync if needed, though hook does await.
-            Alert.alert(
-                'Work Plan Created',
-                'Your work plan has been saved as a draft. Would you like to activate it and start tracking now?',
-                [
-                    { text: 'Later', onPress: () => router.replace('/'), style: 'cancel' },
-                    {
-                        text: 'Activate Now',
-                        onPress: async () => {
-                            setSubmitting(true);
-                            // We need to fetch the plan again or use state
-                            // For simplicity in this block, we assume activation is separate or handle it here
-                            // Actually, Block 2 createWorkPlan doesn't return the plan ID easily now.
-                            // I'll update the hook slightly in next block if needed, but per Block 3 rules "No hook modifications".
-                            // I will use fetchTodayPlan logic or similar.
-
-                            // Let's assume we can activate the latest today's plan from the hook.
-                            // I'll navigate to home where it shows activation prompt, or handle it here.
-                            router.replace('/');
-                        }
-                    }
-                ]
-            );
+            Alert.alert('Success', 'Work plan created and activated!', [
+                { text: 'OK', onPress: () => router.replace('/') }
+            ]);
         } catch (err: any) {
             Alert.alert('Error', err.message || 'An unexpected error occurred.');
         } finally {
@@ -174,26 +167,64 @@ export default function DailyWorkPlanScreen() {
 
                 {routePoints.map((point, index) => (
                     <View key={point.id} style={styles.routePointCard}>
-                        {activePicker === point.id && (
+
+                        {/* AREA PICKER OVERLAY */}
+                        {activeAreaPicker === point.id && (
                             <View style={styles.pickerOverlay}>
-                                <Text style={styles.pickerTitle}>Select Lead</Text>
+                                <Text style={styles.pickerTitle}>Select Area</Text>
                                 <ScrollView style={styles.leadsList} nestedScrollEnabled>
-                                    {availableLeads.length === 0 ? (
-                                        <Text style={styles.emptyLeads}>No leads assigned to you.</Text>
+                                    {areas.length === 0 ? (
+                                        <Text style={styles.emptyLeads}>No areas found.</Text>
                                     ) : (
-                                        availableLeads.map(lead => (
+                                        areas.map((area: Area) => (
+                                            <TouchableOpacity
+                                                key={area.id}
+                                                style={styles.leadOption}
+                                                onPress={() => handleAreaSelect(point.id, area)}
+                                            >
+                                                <Text style={styles.leadOptionName}>{area.name}</Text>
+                                                {area.city && <Text style={styles.leadOptionType}>{area.city}</Text>}
+                                            </TouchableOpacity>
+                                        ))
+                                    )}
+                                </ScrollView>
+                                <TouchableOpacity onPress={() => router.push('/add-lead')} style={styles.addPartyInPicker}>
+                                    <PlusIcon size={16} color="#3b82f6" />
+                                    <Text style={styles.addPartyText}>Add New Area / Party</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setActiveAreaPicker(null)} style={styles.closePicker}>
+                                    <Text style={styles.closePickerText}>Cancel</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {/* LEAD PICKER OVERLAY */}
+                        {activeLeadPicker === point.id && (
+                            <View style={styles.pickerOverlay}>
+                                <Text style={styles.pickerTitle}>Select Party</Text>
+                                <ScrollView style={styles.leadsList} nestedScrollEnabled>
+                                    {!selectedAreaForPoint[point.id] ? (
+                                        <Text style={styles.emptyLeads}>Please select an area first.</Text>
+                                    ) : (tempLeads[point.id] || []).length === 0 ? (
+                                        <Text style={styles.emptyLeads}>No parties found in this area.</Text>
+                                    ) : (
+                                        (tempLeads[point.id] || []).map(lead => (
                                             <TouchableOpacity
                                                 key={lead.id}
                                                 style={styles.leadOption}
                                                 onPress={() => selectLead(point.id, lead)}
                                             >
                                                 <Text style={styles.leadOptionName}>{lead.name}</Text>
-                                                <Text style={styles.leadOptionType}>{lead.client_type} • {lead.status}</Text>
+                                                <Text style={styles.leadOptionType}>{lead.client_type} • {lead.phone_number}</Text>
                                             </TouchableOpacity>
                                         ))
                                     )}
                                 </ScrollView>
-                                <TouchableOpacity onPress={() => setActivePicker(null)} style={styles.closePicker}>
+                                <TouchableOpacity onPress={() => router.push('/add-lead')} style={styles.addPartyInPicker}>
+                                    <PlusIcon size={16} color="#3b82f6" />
+                                    <Text style={styles.addPartyText}>Add New Party</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setActiveLeadPicker(null)} style={styles.closePicker}>
                                     <Text style={styles.closePickerText}>Cancel</Text>
                                 </TouchableOpacity>
                             </View>
@@ -203,15 +234,32 @@ export default function DailyWorkPlanScreen() {
                             <View style={styles.sequenceBadge}>
                                 <Text style={styles.sequenceText}>{point.sequence}</Text>
                             </View>
-                            <TouchableOpacity
-                                style={styles.leadSelector}
-                                onPress={() => setActivePicker(point.id)}
-                            >
-                                <Text style={[styles.leadSelectorText, !point.name && styles.placeholderText]}>
-                                    {point.name || 'Select Lead/Client'}
-                                </Text>
-                                <ChevronDownIcon size={16} color="#71717a" />
-                            </TouchableOpacity>
+
+                            <View style={{ flex: 1, gap: 8 }}>
+                                {/* Area Selector */}
+                                <TouchableOpacity
+                                    style={styles.leadSelector}
+                                    onPress={() => setActiveAreaPicker(point.id)}
+                                >
+                                    <Text style={[styles.leadSelectorText, !selectedAreaForPoint[point.id] && styles.placeholderText]}>
+                                        {areas.find(a => a.id === selectedAreaForPoint[point.id])?.name || 'Select Area'}
+                                    </Text>
+                                    <ChevronDownIcon size={16} color="#71717a" />
+                                </TouchableOpacity>
+
+                                {/* Lead Selector */}
+                                <TouchableOpacity
+                                    style={[styles.leadSelector, !selectedAreaForPoint[point.id] && styles.disabledSelector]}
+                                    onPress={() => selectedAreaForPoint[point.id] && setActiveLeadPicker(point.id)}
+                                    disabled={!selectedAreaForPoint[point.id]}
+                                >
+                                    <Text style={[styles.leadSelectorText, !point.name && styles.placeholderText]}>
+                                        {point.name || 'Select Party'}
+                                    </Text>
+                                    <ChevronDownIcon size={16} color="#71717a" />
+                                </TouchableOpacity>
+                            </View>
+
                             {routePoints.length > 1 && (
                                 <TouchableOpacity onPress={() => removeRoutePoint(point.id)} style={styles.removeBtn}>
                                     <TrashIcon size={20} color="#ef4444" />
@@ -520,4 +568,17 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     closePickerText: { color: '#fff', fontWeight: 'bold' },
+    disabledSelector: { opacity: 0.5, backgroundColor: '#09090b' },
+    addPartyInPicker: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 16,
+        backgroundColor: '#18181b',
+        borderTopWidth: 1,
+        borderTopColor: '#27272a',
+        marginTop: 8,
+    },
+    addPartyText: { color: '#3b82f6', fontWeight: 'bold', fontSize: 14 },
 });

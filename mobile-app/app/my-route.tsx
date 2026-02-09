@@ -224,50 +224,68 @@ function MyRouteContent() {
                     </View>
 
                     {meetings.length > 0 ? (
-                        meetings.map((m: any, idx: number) => (
-                            <View key={`meeting-${m.id || idx}`} style={styles.meetingItem}>
-                                <View style={styles.meetingBadge}>
-                                    <Text style={styles.meetingSeq}>{m?.sequence ?? (idx + 1)}</Text>
-                                </View>
-                                <View style={{ flex: 1, gap: 4 }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                        <Text style={styles.meetingName} numberOfLines={1}>
-                                            {m?.lead?.name ?? 'Unknown Client'}
-                                        </Text>
-                                        {m.priority && (
-                                            <View style={[styles.priorityBadge, (styles as any)[`priorityBadge_${m.priority}`]]}>
-                                                <Text style={styles.priorityText}>{m.priority.toUpperCase()}</Text>
-                                            </View>
-                                        )}
+                        meetings.map((m: any, idx: number) => {
+                            const lead = m?.lead;
+                            const areaName = lead?.areas?.name || lead?.area?.name || 'No Area';
+                            const phone = lead?.phone_number || 'No Phone';
+                            const hasLocation = lead?.latitude && lead?.longitude;
+
+                            return (
+                                <View key={`meeting-${m.id || idx}`} style={styles.meetingItem}>
+                                    <View style={styles.meetingBadge}>
+                                        <Text style={styles.meetingSeq}>{m?.sequence ?? (idx + 1)}</Text>
                                     </View>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                        <Text style={styles.objectiveText}>{m.objective || 'Intro'}</Text>
-                                        <Text style={styles.objectiveText}>•</Text>
-                                        <Text style={styles.objectiveText}>{m.lead?.client_type || 'Retailer'}</Text>
-                                        <Text style={styles.objectiveText}>•</Text>
-                                        <Text style={[styles.objectiveText, { color: m.status === 'visited' ? '#10b981' : '#a1a1aa' }]}>
-                                            {m.status?.toUpperCase() || 'PENDING'}
-                                        </Text>
+                                    <View style={{ flex: 1, gap: 4 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                            <Text style={styles.meetingName} numberOfLines={1}>
+                                                {lead?.name ?? 'Unknown Client'}
+                                            </Text>
+                                            {m.priority && (
+                                                <View style={[styles.priorityBadge, (styles as any)[`priorityBadge_${m.priority}`]]}>
+                                                    <Text style={styles.priorityText}>{m.priority.toUpperCase()}</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                            <Text style={styles.metaText}>{areaName}</Text>
+                                            <Text style={styles.metaSeparator}>•</Text>
+                                            <Text style={styles.metaText}>{phone}</Text>
+                                            {!hasLocation && (
+                                                <>
+                                                    <Text style={styles.metaSeparator}>•</Text>
+                                                    <Text style={[styles.metaText, { color: '#f59e0b' }]}>📍 Location not set</Text>
+                                                </>
+                                            )}
+                                        </View>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                                            <Text style={styles.objectiveText}>{m.objective || 'Intro'}</Text>
+                                            <Text style={styles.objectiveText}>•</Text>
+                                            <Text style={styles.objectiveText}>{lead?.client_type || 'Retailer'}</Text>
+                                            <Text style={styles.objectiveText}>•</Text>
+                                            <Text style={[styles.objectiveText, { color: m.status === 'visited' ? '#10b981' : '#a1a1aa' }]}>
+                                                {m.status?.toUpperCase() || 'PENDING'}
+                                            </Text>
+                                        </View>
                                     </View>
+                                    {currentPlan?.status === 'active' && m.status !== 'visited' && (
+                                        <TouchableOpacity
+                                            style={styles.reportBtn}
+                                            onPress={() => router.push({
+                                                pathname: '/visit-report',
+                                                params: {
+                                                    leadName: lead?.name,
+                                                    meetingId: m.id,
+                                                    workPlanId: currentPlan.id
+                                                }
+                                            })}
+                                        >
+                                            <MessageSquareIcon size={16} color="#3b82f6" />
+                                            <Text style={styles.reportBtnText}>Report</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
-                                {currentPlan?.status === 'active' && m.status !== 'visited' && (
-                                    <TouchableOpacity
-                                        style={styles.reportBtn}
-                                        onPress={() => router.push({
-                                            pathname: '/visit-report',
-                                            params: {
-                                                leadName: m.lead?.name,
-                                                meetingId: m.id,
-                                                workPlanId: currentPlan.id
-                                            }
-                                        })}
-                                    >
-                                        <MessageSquareIcon size={16} color="#3b82f6" />
-                                        <Text style={styles.reportBtnText}>Report</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        ))
+                            );
+                        })
                     ) : (
                         <View style={styles.emptyState}>
                             <Text style={styles.emptyStateText}>Route is empty. Add your first meeting below.</Text>
@@ -361,5 +379,7 @@ const styles = StyleSheet.create({
     errorTitle: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginTop: 16 },
     errorSubtitle: { color: '#a1a1aa', textAlign: 'center', marginTop: 8, marginBottom: 24 },
     retryBtn: { backgroundColor: '#27272a', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-    retryBtnText: { color: '#fff', fontWeight: 'bold' }
+    retryBtnText: { color: '#fff', fontWeight: 'bold' },
+    metaText: { color: '#a1a1aa', fontSize: 13, fontWeight: '500' },
+    metaSeparator: { color: '#3f3f46', fontSize: 13 },
 });

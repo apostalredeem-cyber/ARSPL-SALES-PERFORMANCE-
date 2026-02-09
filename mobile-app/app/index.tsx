@@ -9,6 +9,8 @@ import FaceRecognition from '../src/components/FaceRecognition';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
 import { useTravelSummary } from '../src/hooks/useTravelSummary';
 import { useLeads } from '../src/hooks/useLeads';
+import { useCRM } from '../src/hooks/useCRM';
+import { RefreshCcw } from 'lucide-react-native';
 
 const MapPinIcon = MapPin as any;
 const PowerIcon = Power as any;
@@ -30,6 +32,7 @@ export default function Dashboard() {
     const { currentPlan, hasActiveWorkPlan, hasTodayWorkPlan, loading: planLoading } = useDailyWorkPlan();
     const { weeklySummary, fetchWeeklySummary } = useTravelSummary();
     const { leads } = useLeads();
+    const { pendingCount } = useCRM();
     const [faceVisible, setFaceVisible] = React.useState(false);
 
     // CRM Metrics
@@ -80,8 +83,16 @@ export default function Dashboard() {
                 <View>
                     <Text style={styles.welcomeText}>Welcome back,</Text>
                     <Text style={styles.userName}>{profile?.full_name || 'Employee'}</Text>
-                    <View style={styles.versionBadge}>
-                        <Text style={styles.versionText}>v1.0.1</Text>
+                    <View style={styles.versionRow}>
+                        <View style={styles.versionBadge}>
+                            <Text style={styles.versionText}>v1.0.1</Text>
+                        </View>
+                        {pendingCount > 0 && (
+                            <View style={styles.syncBadge}>
+                                <RefreshCcw size={10} color="#f59e0b" />
+                                <Text style={styles.syncText}>{pendingCount} Syncing</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
                 <TouchableOpacity onPress={handleAuthSignOut} style={styles.signOutButton}>
@@ -304,6 +315,26 @@ const styles = StyleSheet.create({
         color: '#3b82f6',
         fontSize: 10,
         fontWeight: 'bold'
+    },
+    versionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 4,
+    },
+    syncBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#f59e0b15',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
+    },
+    syncText: {
+        color: '#f59e0b',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
     content: {
         padding: 24,
