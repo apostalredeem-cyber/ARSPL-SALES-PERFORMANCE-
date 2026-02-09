@@ -38,7 +38,7 @@ export const useLeads = () => {
             if (fetchError) throw fetchError;
 
             // Apply null-safe defaults
-            const sanitizedLeads = (data || []).map(lead => ({
+            const sanitizedLeads = ((data as any[]) || []).map(lead => ({
                 ...lead,
                 expected_value: lead.expected_value || 0,
                 client_type: lead.client_type || 'Other',

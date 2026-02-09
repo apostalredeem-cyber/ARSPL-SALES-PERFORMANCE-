@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     leadInfo: { flex: 1 },
     leadName: { color: '#fff', fontSize: 15, fontWeight: '600' },
     leadType: { color: '#71717a', fontSize: 12, marginTop: 2 },
-    leadMeta: { alignItems: 'flex-end', flexDirection: 'row', alignItems: 'center', gap: 12 },
+    leadMeta: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     leadValue: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
     emptyStage: { padding: 16, alignItems: 'center', backgroundColor: '#09090b', borderRadius: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: '#18181b' },
     emptyText: { color: '#3f3f46', fontSize: 12 }

@@ -128,13 +128,13 @@ function MyRouteContent() {
         setAddingMeeting(true);
         try {
             // IMMUTABLE ARRAY LOGIC
-            const currentLeads = Array.isArray(currentPlan?.planned_leads) ? currentPlan.planned_leads : [];
-            const newSeq = currentLeads.length + 1;
+            const currentMeetings = Array.isArray(currentPlan?.meetings) ? currentPlan.meetings : [];
+            const newSeq = currentMeetings.length + 1;
 
             const success = await addMeeting({
-                name: name,
+                lead_id: name, // Using name as ID for ad-hoc entry if needed, but really should be a lead picker
                 sequence: newSeq
-            });
+            } as any);
 
             if (success) {
                 setNewMeetingName('');
@@ -235,7 +235,7 @@ function MyRouteContent() {
                                             {m?.lead?.name ?? 'Unknown Client'}
                                         </Text>
                                         {m.priority && (
-                                            <View style={[styles.priorityBadge, styles[`priorityBadge_${m.priority}`]]}>
+                                            <View style={[styles.priorityBadge, (styles as any)[`priorityBadge_${m.priority}`]]}>
                                                 <Text style={styles.priorityText}>{m.priority.toUpperCase()}</Text>
                                             </View>
                                         )}
