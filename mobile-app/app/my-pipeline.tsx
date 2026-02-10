@@ -1,12 +1,8 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLeads } from '../src/hooks/useLeads';
-import { TrendingUp, Target, Package, CheckCircle, ChevronRight, Filter } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 
-const TrendingIcon = TrendingUp as any;
-const TargetIcon = Target as any;
-const PackageIcon = Package as any;
-const CheckIcon = CheckCircle as any;
 
 const STAGES = [
     { name: 'New Lead', color: '#94a3b8' },
@@ -51,18 +47,18 @@ export default function MyPipelineScreen() {
             <View style={styles.header}>
                 <Text style={styles.title}>Sales Pipeline</Text>
                 <TouchableOpacity style={styles.filterBtn}>
-                    <Filter size={20} color="#a1a1aa" />
+                    <Feather name="filter" size={20} color="#a1a1aa" />
                 </TouchableOpacity>
             </View>
 
             <View style={styles.statsContainer}>
                 <View style={styles.statCard}>
-                    <TrendingIcon size={20} color="#3b82f6" />
+                    <Feather name="trending-up" size={20} color="#3b82f6" />
                     <Text style={styles.statLabel}>TOTAL PIPELINE</Text>
                     <Text style={styles.statValue}>₹{(totalPipelineValue / 100000).toFixed(2)}L</Text>
                 </View>
                 <View style={styles.statCard}>
-                    <CheckIcon size={20} color="#10b981" />
+                    <Feather name="check-circle" size={20} color="#10b981" />
                     <Text style={statLabel_won}>ACHIEVED</Text>
                     <Text style={styles.statValue}>₹{(wonValue / 100000).toFixed(2)}L</Text>
                 </View>
@@ -93,7 +89,7 @@ export default function MyPipelineScreen() {
                                         </View>
                                         <View style={styles.leadMeta}>
                                             <Text style={styles.leadValue}>₹{lead.expected_value.toLocaleString()}</Text>
-                                            <ChevronRight size={16} color="#27272a" />
+                                            <Feather name="chevron-right" size={16} color="#27272a" />
                                         </View>
                                     </TouchableOpacity>
                                 ))

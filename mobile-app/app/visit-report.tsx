@@ -2,15 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useVisitReports } from '../src/hooks/useVisitReports';
-import { CheckCircle, XCircle, FileText, TrendingUp, IndianRupee, Camera, MapPin, ChevronRight } from 'lucide-react-native';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 
-const CheckIcon = CheckCircle as any;
-const XIcon = XCircle as any;
-const FileIcon = FileText as any;
-const TrendingIcon = TrendingUp as any;
-const RupeeIcon = IndianRupee as any;
-const CameraIcon = Camera as any;
-const MapPinIcon = MapPin as any;
 
 export default function VisitReportScreen() {
     const router = useRouter();
@@ -100,14 +93,14 @@ export default function VisitReportScreen() {
                         style={[styles.statusOption, status === 'Completed' && styles.statusActive_ok]}
                         onPress={() => setStatus('Completed')}
                     >
-                        <CheckIcon size={20} color={status === 'Completed' ? '#10b981' : '#52525b'} />
+                        <Feather name="check-circle" size={20} color={status === 'Completed' ? '#10b981' : '#52525b'} />
                         <Text style={[styles.statusText, status === 'Completed' && styles.statusTextActive]}>Completed</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.statusOption, status === 'Not Completed' && styles.statusActive_err]}
                         onPress={() => setStatus('Not Completed')}
                     >
-                        <XIcon size={20} color={status === 'Not Completed' ? '#ef4444' : '#52525b'} />
+                        <Feather name="x-circle" size={20} color={status === 'Not Completed' ? '#ef4444' : '#52525b'} />
                         <Text style={[styles.statusText, status === 'Not Completed' && styles.statusTextActive]}>Not Completed</Text>
                     </TouchableOpacity>
                 </View>
@@ -116,7 +109,7 @@ export default function VisitReportScreen() {
             <View style={styles.section}>
                 <Text style={styles.sectionLabel}>DISCUSSION SUMMARY</Text>
                 <View style={styles.inputCard}>
-                    <FileIcon size={20} color="#3b82f6" style={styles.inputIcon} />
+                    <Feather name="file-text" size={20} color="#3b82f6" style={styles.inputIcon} />
                     <TextInput
                         style={styles.textArea}
                         multiline
@@ -159,7 +152,7 @@ export default function VisitReportScreen() {
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>ORDER DETAILS</Text>
                             <View style={styles.inputCard}>
-                                <IndianRupee size={20} color="#10b981" style={styles.inputIcon} />
+                                <FontAwesome name="rupee" size={20} color="#10b981" style={styles.inputIcon} />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Confirmed Order Value (₹)"
@@ -176,7 +169,7 @@ export default function VisitReportScreen() {
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>EXPECTED ORDER DATE</Text>
                             <View style={styles.inputCard}>
-                                <TrendingIcon size={20} color="#3b82f6" style={styles.inputIcon} />
+                                <Feather name="trending-up" size={20} color="#3b82f6" style={styles.inputIcon} />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="YYYY-MM-DD"
@@ -192,11 +185,11 @@ export default function VisitReportScreen() {
 
             <View style={styles.mediaSection}>
                 <TouchableOpacity style={styles.mediaBtn}>
-                    <CameraIcon size={20} color="#a1a1aa" />
+                    <Feather name="camera" size={20} color="#a1a1aa" />
                     <Text style={styles.mediaBtnText}>Attach Photo / Visiting Card</Text>
                 </TouchableOpacity>
                 <View style={styles.gpsLock}>
-                    <MapPinIcon size={14} color="#10b981" />
+                    <Feather name="map-pin" size={14} color="#10b981" />
                     <Text style={styles.gpsLockText}>Location will be captured on submit</Text>
                 </View>
             </View>
@@ -211,7 +204,7 @@ export default function VisitReportScreen() {
                 ) : (
                     <>
                         <Text style={styles.submitBtnText}>Submit Visit Report</Text>
-                        <ChevronRight size={20} color="#fff" />
+                        <Feather name="chevron-right" size={20} color="#fff" />
                     </>
                 )}
             </TouchableOpacity>

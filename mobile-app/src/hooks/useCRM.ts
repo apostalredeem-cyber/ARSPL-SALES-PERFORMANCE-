@@ -195,13 +195,13 @@ export const useCRM = () => {
     }, [queue.length]); // Re-fetch/merge when queue changes
 
     return {
-        areas,
-        loading,
-        error,
+        areas: Array.isArray(areas) ? areas : [],
+        loading: !!loading,
+        error: error ?? null,
         fetchAreas,
-        addArea,
-        addLead,
-        fetchLeadsInArea,
-        pendingCount: queue.length
+        addArea: typeof addArea === 'function' ? addArea : async () => null,
+        addLead: typeof addLead === 'function' ? addLead : async () => null,
+        fetchLeadsInArea: typeof fetchLeadsInArea === 'function' ? fetchLeadsInArea : async () => [],
+        pendingCount: queue.length || 0
     };
 };

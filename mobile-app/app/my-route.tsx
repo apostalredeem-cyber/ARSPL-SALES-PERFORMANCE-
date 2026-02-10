@@ -4,17 +4,10 @@ import MapView, { Polyline, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
-import { Map as MapIcon, Navigation, Plus, MapPin, AlertCircle, MessageSquare, Trash } from 'lucide-react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLeads } from '../src/hooks/useLeads';
 
-// Safe Icon Casts
-const MapIconComp = MapIcon as any;
-const NavigationIcon = Navigation as any;
-const PlusIcon = Plus as any;
-const MapPinIcon = MapPin as any;
-const AlertCircleIcon = AlertCircle as any;
-const MessageSquareIcon = MessageSquare as any;
 
 /**
  * GLOBAL ERROR BOUNDARY
@@ -38,7 +31,7 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
         if (this.state.hasError) {
             return (
                 <View style={styles.centered}>
-                    <AlertCircleIcon size={48} color="#ef4444" />
+                    <Feather name="alert-circle" size={48} color="#ef4444" />
                     <Text style={styles.errorTitle}>Stability Mode Active</Text>
                     <Text style={styles.errorSubtitle}>The route screen encountered a runtime issue. Fallback mode engaged.</Text>
                     <TouchableOpacity
@@ -161,7 +154,7 @@ function MyRouteContent() {
     if (!hasActiveWorkPlan()) {
         return (
             <View style={styles.centered}>
-                <AlertCircleIcon size={48} color="#f59e0b" />
+                <Feather name="alert-circle" size={48} color="#f59e0b" />
                 <Text style={styles.noDataTitle}>No Active Work Plan</Text>
                 <Text style={styles.noDataText}>Activate your work plan from the dashboard to enable route viewing.</Text>
             </View>
@@ -174,7 +167,7 @@ function MyRouteContent() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <MapIconComp size={24} color="#3b82f6" />
+                <Feather name="map" size={24} color="#3b82f6" />
                 <Text style={styles.title}>My Today's Route</Text>
                 <View style={styles.versionBadge}>
                     <Text style={styles.versionText}>v1.1.0 RELATIONAL</Text>
@@ -205,12 +198,12 @@ function MyRouteContent() {
                                 <View style={styles.startMarker} />
                             </Marker>
                             <Marker coordinate={locations[locations.length - 1]} title="Current Position">
-                                <NavigationIcon size={24} color="#3b82f6" fill="#3b82f6" />
+                                <Feather name="navigation" size={24} color="#3b82f6" />
                             </Marker>
                         </MapView>
                     ) : (
                         <View style={styles.noMapData}>
-                            <AlertCircleIcon size={32} color="#27272a" />
+                            <Feather name="alert-circle" size={32} color="#27272a" />
                             <Text style={styles.noDataText}>No GPS movements recorded yet.</Text>
                         </View>
                     )}
@@ -219,7 +212,7 @@ function MyRouteContent() {
                 {/* Meetings Section */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <MapPinIcon size={20} color="#3b82f6" />
+                        <Feather name="map-pin" size={20} color="#3b82f6" />
                         <Text style={styles.sectionTitle}>Planned Meetings</Text>
                     </View>
 
@@ -279,7 +272,7 @@ function MyRouteContent() {
                                                 }
                                             })}
                                         >
-                                            <MessageSquareIcon size={16} color="#3b82f6" />
+                                            <Feather name="message-square" size={16} color="#3b82f6" />
                                             <Text style={styles.reportBtnText}>Report</Text>
                                         </TouchableOpacity>
                                     )}
@@ -311,7 +304,7 @@ function MyRouteContent() {
                                 <ActivityIndicator size="small" color="#fff" />
                             ) : (
                                 <>
-                                    <PlusIcon size={20} color="#fff" />
+                                    <Feather name="plus" size={20} color="#fff" />
                                     <Text style={styles.addBtnText}>Add to Route</Text>
                                 </>
                             )}

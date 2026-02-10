@@ -20,28 +20,8 @@ import * as Location from 'expo-location';
  */
 import { useCRM } from '../src/hooks/useCRM';
 
-/* Icons – cast as any to avoid runtime invalid element errors */
-import {
-  UserPlus,
-  Phone,
-  MapPin,
-  Map,
-  Plus,
-  X,
-  GpsFixed,
-  ChevronDown,
-} from 'lucide-react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
-const I = {
-  UserPlus: UserPlus as any,
-  Phone: Phone as any,
-  MapPin: MapPin as any,
-  Map: Map as any,
-  Plus: Plus as any,
-  X: X as any,
-  GPS: GpsFixed as any,
-  Down: ChevronDown as any,
-};
 
 export default function AddLeadScreen() {
   const router = useRouter();
@@ -131,12 +111,12 @@ export default function AddLeadScreen() {
         <Text style={s.title}>Add New Party</Text>
 
         {/* Name */}
-        <Field label="Party Name *" icon={<I.UserPlus size={18} />}>
+        <Field label="Party Name *" icon={<Feather name="user-plus" size={18} color="#fff" />}>
           <TextInput value={name} onChangeText={setName} style={s.input} />
         </Field>
 
         {/* Phone */}
-        <Field label="Phone *" icon={<I.Phone size={18} />}>
+        <Field label="Phone *" icon={<Feather name="phone" size={18} color="#fff" />}>
           <TextInput
             value={phone}
             onChangeText={setPhone}
@@ -146,13 +126,13 @@ export default function AddLeadScreen() {
         </Field>
 
         {/* Area */}
-        <Field label="Area *" icon={<I.Map size={18} />}>
+        <Field label="Area *" icon={<Feather name="map" size={18} color="#fff" />}>
           <TouchableOpacity
             style={s.selector}
             onPress={() => setAreaModal(true)}
           >
             <Text style={s.selectorText}>{selectedArea}</Text>
-            <I.Down size={18} />
+            <Feather name="chevron-down" size={18} color="#fff" />
           </TouchableOpacity>
         </Field>
 
@@ -168,7 +148,7 @@ export default function AddLeadScreen() {
 
         {/* GPS */}
         <TouchableOpacity style={s.gpsBtn} onPress={captureLocation}>
-          <I.GPS size={18} />
+          <Ionicons name="locate" size={18} color="#fff" />
           <Text style={s.gpsText}>
             {lat ? 'Update Location' : 'Capture Location'}
           </Text>
@@ -216,7 +196,7 @@ export default function AddLeadScreen() {
                 style={s.addBtn}
                 onPress={() => setAddAreaMode(true)}
               >
-                <I.Plus size={18} />
+                <Feather name="plus" size={18} color="#000" />
                 <Text>Add New Area</Text>
               </TouchableOpacity>
             </>

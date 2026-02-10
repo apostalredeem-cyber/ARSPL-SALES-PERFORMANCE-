@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image } from 'react-native';
 import { supabase } from '../src/lib/supabase';
-import { LogIn } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 
-const LogInIcon = LogIn as any;
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');

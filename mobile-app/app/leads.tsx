@@ -2,14 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/contexts/AuthContext';
-import { Search, MapPin, ChevronRight, Briefcase } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-// Casting icons to 'any' to bypass strict linting issues
-const SearchIcon = Search as any;
-const MapPinIcon = MapPin as any;
-const ChevronRightIcon = ChevronRight as any;
-const BriefcaseIcon = Briefcase as any;
 
 export default function LeadsScreen() {
     const { user } = useAuth();
@@ -54,7 +49,7 @@ export default function LeadsScreen() {
             <View style={styles.header}>
                 <Text style={styles.title}>My Clients</Text>
                 <View style={styles.searchBar}>
-                    <SearchIcon size={18} color="#71717a" />
+                    <Feather name="search" size={18} color="#71717a" />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search leads or areas..."
@@ -76,19 +71,19 @@ export default function LeadsScreen() {
                         })}
                     >
                         <View style={styles.leadIcon}>
-                            <BriefcaseIcon size={20} color="#3b82f6" />
+                            <Feather name="briefcase" size={20} color="#3b82f6" />
                         </View>
                         <View style={styles.leadInfo}>
                             <Text style={styles.leadName}>{lead.name}</Text>
                             <View style={styles.leadMeta}>
-                                <MapPinIcon size={12} color="#71717a" />
+                                <Feather name="map-pin" size={12} color="#71717a" />
                                 <Text style={styles.leadArea}>{lead.areas?.name || 'No Area'}</Text>
                             </View>
                         </View>
                         <View style={styles.leadBadge}>
                             <Text style={styles.badgeText}>P{lead.priority_score}</Text>
                         </View>
-                        <ChevronRightIcon size={18} color="#27272a" />
+                        <Feather name="chevron-right" size={18} color="#27272a" />
                     </TouchableOpacity>
                 ))}
             </ScrollView>

@@ -1,14 +1,9 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useTravelSummary } from '../src/hooks/useTravelSummary';
-import { Calendar, TrendingUp, CheckCircle, Clock, IndianRupee } from 'lucide-react-native';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-const CalendarIcon = Calendar as any;
-const TrendingUpIcon = TrendingUp as any;
-const CheckCircleIcon = CheckCircle as any;
-const ClockIcon = Clock as any;
-const IndianRupeeIcon = IndianRupee as any;
 
 export default function WeeklyTravelSummaryScreen() {
     const router = useRouter();
@@ -70,7 +65,7 @@ export default function WeeklyTravelSummaryScreen() {
                 <View style={styles.totalCard}>
                     <View style={styles.totalRow}>
                         <View style={styles.totalItem}>
-                            <TrendingUpIcon size={24} color="#3b82f6" />
+                            <Feather name="trending-up" size={24} color="#3b82f6" />
                             <Text style={styles.totalLabel}>Total Distance</Text>
                             <Text style={styles.totalValue}>{weeklySummary.total_km.toFixed(2)} km</Text>
                         </View>
@@ -78,7 +73,7 @@ export default function WeeklyTravelSummaryScreen() {
                         <View style={styles.divider} />
 
                         <View style={styles.totalItem}>
-                            <IndianRupeeIcon size={24} color="#10b981" />
+                            <FontAwesome name="rupee" size={24} color="#10b981" />
                             <Text style={styles.totalLabel}>Total Allowance</Text>
                             <Text style={styles.totalValue}>₹{weeklySummary.total_amount.toFixed(2)}</Text>
                         </View>
@@ -86,11 +81,11 @@ export default function WeeklyTravelSummaryScreen() {
 
                     <View style={styles.statusRow}>
                         <View style={styles.statusItem}>
-                            <CheckCircleIcon size={16} color="#10b981" />
+                            <Feather name="check-circle" size={16} color="#10b981" />
                             <Text style={styles.statusText}>{weeklySummary.approved_count} Approved</Text>
                         </View>
                         <View style={styles.statusItem}>
-                            <ClockIcon size={16} color="#f59e0b" />
+                            <Feather name="clock" size={16} color="#f59e0b" />
                             <Text style={styles.statusText}>{weeklySummary.pending_count} Pending</Text>
                         </View>
                     </View>
@@ -103,7 +98,7 @@ export default function WeeklyTravelSummaryScreen() {
 
                 {weeklyDetails.length === 0 ? (
                     <View style={styles.emptyCard}>
-                        <CalendarIcon size={48} color="#52525b" />
+                        <Feather name="calendar" size={48} color="#52525b" />
                         <Text style={styles.emptyText}>No travel data for this week yet.</Text>
                         <Text style={styles.emptySubtext}>Start your daily work plan to begin tracking.</Text>
                     </View>
@@ -129,11 +124,11 @@ export default function WeeklyTravelSummaryScreen() {
 
                             <View style={styles.dayStats}>
                                 <View style={styles.dayStat}>
-                                    <TrendingUpIcon size={16} color="#a1a1aa" />
+                                    <Feather name="trending-up" size={16} color="#a1a1aa" />
                                     <Text style={styles.dayStatValue}>{day.total_km.toFixed(2)} km</Text>
                                 </View>
                                 <View style={styles.dayStat}>
-                                    <IndianRupeeIcon size={16} color="#a1a1aa" />
+                                    <FontAwesome name="rupee" size={16} color="#a1a1aa" />
                                     <Text style={styles.dayStatValue}>₹{day.travel_amount.toFixed(2)}</Text>
                                 </View>
                             </View>

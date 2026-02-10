@@ -3,26 +3,14 @@ import { StyleSheet, View, Text, TouchableOpacity, ScrollView, Alert } from 'rea
 import { useAuth } from '../src/contexts/AuthContext';
 import { useTracking } from '../src/hooks/useTracking';
 import { useAttendance } from '../src/hooks/useAttendance';
-import { MapPin, Power, Map as MapIcon, ClipboardList, LogOut, Clock, Briefcase, Sparkles, TrendingUp, IndianRupee, Target } from 'lucide-react-native';
+import { Feather, Ionicons, FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import FaceRecognition from '../src/components/FaceRecognition';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
 import { useTravelSummary } from '../src/hooks/useTravelSummary';
 import { useLeads } from '../src/hooks/useLeads';
 import { useCRM } from '../src/hooks/useCRM';
-import { RefreshCcw } from 'lucide-react-native';
 
-const MapPinIcon = MapPin as any;
-const PowerIcon = Power as any;
-const MapIconComp = MapIcon as any;
-const ClipboardListIcon = ClipboardList as any;
-const LogOutIcon = LogOut as any;
-const ClockIcon = Clock as any;
-const BriefcaseIcon = Briefcase as any;
-const SparklesIcon = Sparkles as any;
-const TrendingUpIcon = TrendingUp as any;
-const IndianRupeeIcon = IndianRupee as any;
-const TargetIcon = Target as any;
 
 export default function Dashboard() {
     const router = useRouter();
@@ -89,14 +77,14 @@ export default function Dashboard() {
                         </View>
                         {pendingCount > 0 && (
                             <View style={styles.syncBadge}>
-                                <RefreshCcw size={10} color="#f59e0b" />
+                                <Feather name="refresh-ccw" size={10} color="#f59e0b" />
                                 <Text style={styles.syncText}>{pendingCount} Syncing</Text>
                             </View>
                         )}
                     </View>
                 </View>
                 <TouchableOpacity onPress={handleAuthSignOut} style={styles.signOutButton}>
-                    <LogOutIcon size={20} color="#a1a1aa" />
+                    <Feather name="log-out" size={20} color="#a1a1aa" />
                 </TouchableOpacity>
             </View>
 
@@ -110,7 +98,7 @@ export default function Dashboard() {
                         </Text>
                         {activeAttendance && (
                             <View style={styles.attendanceBadge}>
-                                <ClockIcon size={12} color="#3b82f6" />
+                                <Feather name="clock" size={12} color="#3b82f6" />
                                 <Text style={styles.attendanceText}>Clocked In: {new Date(activeAttendance.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                             </View>
                         )}
@@ -119,7 +107,7 @@ export default function Dashboard() {
                         style={[styles.toggleButton, isTracking ? styles.toggleActive : styles.toggleInactive]}
                         onPress={toggleTracking}
                     >
-                        <PowerIcon size={24} color="white" />
+                        <Feather name="power" size={24} color="white" />
                         <Text style={styles.toggleButtonText}>
                             {isTracking ? 'Clock Out / End Duty' : 'Clock In / Start Duty'}
                         </Text>
@@ -137,7 +125,7 @@ export default function Dashboard() {
                         style={styles.guidanceCard}
                         onPress={() => router.push('/daily-work-plan')}
                     >
-                        <SparklesIcon size={24} color="#3b82f6" />
+                        <Ionicons name="sparkles" size={24} color="#3b82f6" />
                         <View style={{ flex: 1 }}>
                             <Text style={styles.guidanceTitle}>Plan your day</Text>
                             <Text style={styles.guidanceText}>Create a work plan to start tracking your route.</Text>
@@ -152,14 +140,14 @@ export default function Dashboard() {
                 {/* CRM Metrics Row */}
                 <View style={styles.metricsRow}>
                     <View style={styles.miniMetric}>
-                        <TrendingUpIcon size={16} color="#3b82f6" />
+                        <Feather name="trending-up" size={16} color="#3b82f6" />
                         <View>
                             <Text style={styles.metricLabel}>PIPELINE</Text>
                             <Text style={styles.metricValue}>₹{(pipelineValue / 100000).toFixed(1)}L</Text>
                         </View>
                     </View>
                     <View style={styles.miniMetric}>
-                        <TargetIcon size={16} color="#10b981" />
+                        <Feather name="target" size={16} color="#10b981" />
                         <View>
                             <Text style={styles.metricLabel}>TODAY'S TARGET</Text>
                             <Text style={styles.metricValue}>₹{(totalExpectedValue / 1000).toFixed(0)}K</Text>
@@ -183,11 +171,11 @@ export default function Dashboard() {
                         </View>
                         <View style={styles.summaryStats}>
                             <View style={styles.summaryStat}>
-                                <TrendingUpIcon size={20} color="#3b82f6" />
+                                <Feather name="trending-up" size={20} color="#3b82f6" />
                                 <Text style={styles.summaryStatValue}>{weeklySummary.total_km.toFixed(1)} km</Text>
                             </View>
                             <View style={styles.summaryStat}>
-                                <IndianRupeeIcon size={20} color="#10b981" />
+                                <FontAwesome name="rupee" size={20} color="#10b981" />
                                 <Text style={styles.summaryStatValue}>₹{weeklySummary.total_amount.toFixed(2)}</Text>
                             </View>
                         </View>
@@ -209,7 +197,7 @@ export default function Dashboard() {
                             }}
                         >
                             <View style={[styles.iconBox, { backgroundColor: '#3b82f620' }]}>
-                                <MapIconComp size={24} stroke="#3b82f6" />
+                                <Feather name="map" size={24} color="#3b82f6" />
                             </View>
                             <Text style={styles.cardTitle}>My Route</Text>
                             <Text style={styles.cardDesc}>View today's path</Text>
@@ -223,7 +211,7 @@ export default function Dashboard() {
                             onPress={() => router.push('/daily-work-plan')}
                         >
                             <View style={[styles.iconBox, { backgroundColor: '#3b82f620' }]}>
-                                <SparklesIcon size={24} stroke="#3b82f6" />
+                                <Ionicons name="sparkles" size={24} color="#3b82f6" />
                             </View>
                             <Text style={styles.cardTitle}>Work Plan</Text>
                             <Text style={styles.cardDesc}>View today's plan</Text>
@@ -236,7 +224,7 @@ export default function Dashboard() {
                         onPress={() => router.push('/expenses')}
                     >
                         <View style={[styles.iconBox, { backgroundColor: '#f59e0b20' }]}>
-                            <MapPinIcon size={24} stroke="#f59e0b" />
+                            <Feather name="map-pin" size={24} color="#f59e0b" />
                         </View>
                         <Text style={styles.cardTitle}>Expenses</Text>
                         <Text style={styles.cardDesc}>Log travel bills</Text>
@@ -247,7 +235,7 @@ export default function Dashboard() {
                         onPress={() => router.push('/my-pipeline')}
                     >
                         <View style={[styles.iconBox, { backgroundColor: '#8b5cf620' }]}>
-                            <TrendingUpIcon size={24} stroke="#8b5cf6" />
+                            <Feather name="trending-up" size={24} color="#8b5cf6" />
                         </View>
                         <Text style={styles.cardTitle}>Pipeline</Text>
                         <Text style={styles.cardDesc}>Sales track</Text>

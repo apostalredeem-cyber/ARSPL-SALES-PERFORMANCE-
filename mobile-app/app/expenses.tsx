@@ -2,16 +2,10 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { supabase } from '../src/lib/supabase';
 import { useAuth } from '../src/contexts/AuthContext';
-import { Camera, MapPin, IndianRupee, FileText, Send } from 'lucide-react-native';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 
-// Casting icons to 'any' to bypass strict linting issues
-const CameraIcon = Camera as any;
-const MapPinIcon = MapPin as any;
-const IndianRupeeIcon = IndianRupee as any;
-const FileTextIcon = FileText as any;
-const SendIcon = Send as any;
 
 export default function ExpensesScreen() {
     const { user } = useAuth();
@@ -119,7 +113,7 @@ export default function ExpensesScreen() {
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>AMOUNT (INR)</Text>
                     <View style={styles.amountInputContainer}>
-                        <IndianRupeeIcon size={24} color="#3b82f6" />
+                        <FontAwesome name="rupee" size={24} color="#3b82f6" />
                         <TextInput
                             style={styles.amountInput}
                             value={amount}
@@ -174,7 +168,7 @@ export default function ExpensesScreen() {
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>DESCRIPTION</Text>
                     <View style={styles.textAreaContainer}>
-                        <FileTextIcon size={20} color="#52525b" style={styles.textAreaIcon} />
+                        <Feather name="file-text" size={20} color="#52525b" style={styles.textAreaIcon} />
                         <TextInput
                             style={styles.textArea}
                             value={description}
@@ -188,7 +182,7 @@ export default function ExpensesScreen() {
                 </View>
 
                 <TouchableOpacity style={styles.photoBtn}>
-                    <CameraIcon size={24} color="#3b82f6" />
+                    <Feather name="camera" size={24} color="#3b82f6" />
                     <Text style={styles.photoBtnText}>Upload Bill / Receipt</Text>
                 </TouchableOpacity>
             </View>
@@ -202,14 +196,14 @@ export default function ExpensesScreen() {
                     <ActivityIndicator color="white" />
                 ) : (
                     <>
-                        <SendIcon size={20} color="white" />
+                        <Feather name="send" size={20} color="white" />
                         <Text style={styles.submitBtnText}>Submit Expense</Text>
                     </>
                 )}
             </TouchableOpacity>
 
             <View style={styles.infoBox}>
-                <MapPinIcon size={14} color="#71717a" />
+                <Feather name="map-pin" size={14} color="#71717a" />
                 <Text style={styles.infoText}>Your current location will be tagged automatically.</Text>
             </View>
         </ScrollView>

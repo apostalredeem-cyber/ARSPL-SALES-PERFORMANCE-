@@ -4,14 +4,8 @@ import { useRouter } from 'expo-router';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
 import { useLeads } from '../src/hooks/useLeads';
 import { useCRM, Area } from '../src/hooks/useCRM';
-import { Plus, Trash2, MapPin, Clock, Play, ChevronDown } from 'lucide-react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
-const PlusIcon = Plus as any;
-const TrashIcon = Trash2 as any;
-const MapPinIcon = MapPin as any;
-const ClockIcon = Clock as any;
-const PlayIcon = Play as any;
-const ChevronDownIcon = ChevronDown as any;
 
 interface RoutePoint {
     id: string;
@@ -158,7 +152,7 @@ export default function DailyWorkPlanScreen() {
 
             <View style={styles.card}>
                 <View style={styles.sectionHeader}>
-                    <MapPinIcon size={20} color="#3b82f6" />
+                    <Feather name="map-pin" size={20} color="#3b82f6" />
                     <Text style={styles.sectionTitle}>Route Points / Leads</Text>
                     <Text style={[styles.sectionTitle, { marginLeft: 'auto', color: '#10b981' }]}>
                         ₹{totalValue.toLocaleString()}
@@ -189,7 +183,7 @@ export default function DailyWorkPlanScreen() {
                                     )}
                                 </ScrollView>
                                 <TouchableOpacity onPress={() => router.push('/add-lead')} style={styles.addPartyInPicker}>
-                                    <PlusIcon size={16} color="#3b82f6" />
+                                    <Feather name="plus" size={16} color="#3b82f6" />
                                     <Text style={styles.addPartyText}>Add New Area / Party</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setActiveAreaPicker(null)} style={styles.closePicker}>
@@ -221,7 +215,7 @@ export default function DailyWorkPlanScreen() {
                                     )}
                                 </ScrollView>
                                 <TouchableOpacity onPress={() => router.push('/add-lead')} style={styles.addPartyInPicker}>
-                                    <PlusIcon size={16} color="#3b82f6" />
+                                    <Feather name="plus" size={16} color="#3b82f6" />
                                     <Text style={styles.addPartyText}>Add New Party</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={() => setActiveLeadPicker(null)} style={styles.closePicker}>
@@ -244,7 +238,7 @@ export default function DailyWorkPlanScreen() {
                                     <Text style={[styles.leadSelectorText, !selectedAreaForPoint[point.id] && styles.placeholderText]}>
                                         {areas.find(a => a.id === selectedAreaForPoint[point.id])?.name || 'Select Area'}
                                     </Text>
-                                    <ChevronDownIcon size={16} color="#71717a" />
+                                    <Feather name="chevron-down" size={16} color="#71717a" />
                                 </TouchableOpacity>
 
                                 {/* Lead Selector */}
@@ -256,13 +250,13 @@ export default function DailyWorkPlanScreen() {
                                     <Text style={[styles.leadSelectorText, !point.name && styles.placeholderText]}>
                                         {point.name || 'Select Party'}
                                     </Text>
-                                    <ChevronDownIcon size={16} color="#71717a" />
+                                    <Feather name="chevron-down" size={16} color="#71717a" />
                                 </TouchableOpacity>
                             </View>
 
                             {routePoints.length > 1 && (
                                 <TouchableOpacity onPress={() => removeRoutePoint(point.id)} style={styles.removeBtn}>
-                                    <TrashIcon size={20} color="#ef4444" />
+                                    <Feather name="trash-2" size={20} color="#ef4444" />
                                 </TouchableOpacity>
                             )}
                         </View>
@@ -341,14 +335,14 @@ export default function DailyWorkPlanScreen() {
                 ))}
 
                 <TouchableOpacity onPress={addRoutePoint} style={styles.addBtn}>
-                    <PlusIcon size={20} color="#3b82f6" />
+                    <Feather name="plus" size={20} color="#3b82f6" />
                     <Text style={styles.addBtnText}>Add Another Point</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.card}>
                 <View style={styles.sectionHeader}>
-                    <ClockIcon size={20} color="#3b82f6" />
+                    <Feather name="clock" size={20} color="#3b82f6" />
                     <Text style={styles.sectionTitle}>Expected Timing</Text>
                 </View>
 
@@ -386,7 +380,7 @@ export default function DailyWorkPlanScreen() {
                     <ActivityIndicator color="white" />
                 ) : (
                     <>
-                        <PlayIcon size={20} color="white" />
+                        <Feather name="play" size={20} color="white" />
                         <Text style={styles.activateBtnText}>Activate Work Plan & Start Tracking</Text>
                     </>
                 )}
