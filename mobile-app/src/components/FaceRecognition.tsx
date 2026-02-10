@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
-import { X, Camera as CameraIcon, RefreshCw } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 
 interface FaceRecognitionProps {
     visible: boolean;
@@ -9,9 +9,6 @@ interface FaceRecognitionProps {
     onCapture: (uri: string) => void;
 }
 
-const XIcon = X as any;
-const CameraIconComp = CameraIcon as any;
-const RefreshCwIcon = RefreshCw as any;
 
 export default function FaceRecognition({ visible, onClose, onCapture }: FaceRecognitionProps) {
     const [permission, requestPermission] = useCameraPermissions();
@@ -70,7 +67,7 @@ export default function FaceRecognition({ visible, onClose, onCapture }: FaceRec
                 >
                     <View style={styles.overlay}>
                         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                            <XIcon size={24} color="white" />
+                            <Feather name="x" size={24} color="white" />
                         </TouchableOpacity>
 
                         <View style={styles.faceFinder}>
@@ -87,7 +84,7 @@ export default function FaceRecognition({ visible, onClose, onCapture }: FaceRec
                                 onPress={takePicture}
                                 disabled={!isReady}
                             >
-                                <CameraIconComp size={32} color="white" />
+                                <Feather name="camera" size={32} color="white" />
                             </TouchableOpacity>
                         </View>
                     </View>

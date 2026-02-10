@@ -23,10 +23,6 @@ export interface Lead {
     isPending?: boolean;
 }
 
-/**
- * Hook for Phase 3 Lite CRM functionality.
- * Manages manual Area and Lead (Party) creation with offline support.
- */
 export const useCRM = () => {
     const { user } = useAuth();
     const { pushAction, queue } = useOfflineQueue();
@@ -43,13 +39,6 @@ export const useCRM = () => {
         setLoading(true);
         setError(null);
         try {
-            const online = await isOnline();
-            if (!online) {
-                // Return offline areas + any pending ones
-                // For simplicity in Lite, we assume local state is enough or we fetch cached
-                // But we must at least show pending ones
-            }
-
             const { data, error: fetchError } = await supabase
                 .from('areas')
                 .select('*')
@@ -57,7 +46,7 @@ export const useCRM = () => {
 
             if (fetchError) throw fetchError;
 
-            // Merge with pending areas from queue
+            // Merge with pending areas
             const pendingAreas = queue
                 .filter(a => a.type === 'ADD_AREA')
                 .map(a => ({ ...a.payload, id: a.id, isPending: true }));
@@ -79,9 +68,8 @@ export const useCRM = () => {
             const online = await isOnline();
 
             if (!online) {
-                console.log('useCRM: Offline, queueing ADD_AREA');
                 await pushAction('ADD_AREA', payload);
-                await fetchAreas(); // Refresh to show pending
+                await fetchAreas();
                 return { id: 'pending', ...payload, isPending: true } as Area;
             }
 
@@ -92,11 +80,9 @@ export const useCRM = () => {
 
             if (insertError) {
                 if (insertError.code === '23505') {
-                    setError('This area already exists in this city.');
+                    setError('This area already exists.');
                     return null;
                 }
-                // Fallback to queue on unexpected network error
-                console.log('useCRM: Network error, queueing ADD_AREA');
                 await pushAction('ADD_AREA', payload);
                 return { id: 'pending', ...payload, isPending: true } as Area;
             }
@@ -128,7 +114,6 @@ export const useCRM = () => {
             const online = await isOnline();
 
             if (!online) {
-                console.log('useCRM: Offline, queueing ADD_LEAD');
                 await pushAction('ADD_LEAD', payload);
                 return { id: 'pending', ...payload, isPending: true } as Lead;
             }
@@ -140,18 +125,14 @@ export const useCRM = () => {
 
             if (insertError) {
                 if (insertError.code === '23505') {
-                    setError('This phone number already exists.');
-                    return { error: 'duplicate', message: 'This phone number already exists' };
+                    return { error: 'duplicate' };
                 }
-                console.log('useCRM: Network error, queueing ADD_LEAD');
                 await pushAction('ADD_LEAD', payload);
                 return { id: 'pending', ...payload, isPending: true } as Lead;
             }
 
             return data?.[0] as Lead;
         } catch (err: any) {
-            console.log('useCRM: Catch error, queueing ADD_LEAD', err.message);
-            // On catastrophic failure, try to save offline anyway
             const payload = { ...leadData, assigned_staff_id: user?.id };
             await pushAction('ADD_LEAD', payload);
             return { id: 'pending', ...payload, isPending: true } as any;
@@ -164,27 +145,14 @@ export const useCRM = () => {
         if (!areaId) return [];
         setLoading(true);
         try {
-            const { data, error: fetchError } = await (supabase as any)
+            const { data } = await (supabase as any)
                 .from('leads')
                 .select('*, areas(*)')
                 .eq('area_id', areaId)
                 .order('name');
-
-            if (fetchError) throw fetchError;
-
-            // Merge with pending leads in this area
-            const pendingLeads = queue
-                .filter(a => a.type === 'ADD_LEAD' && a.payload.area_id === areaId)
-                .map(a => ({ ...a.payload, id: a.id, isPending: true }));
-
-            return [...(data || []), ...pendingLeads] as Lead[];
-        } catch (err: any) {
-            setError(err.message || 'Failed to fetch leads in area');
-            // If offline, return only pending ones for this area to allow planning
-            const pendingLeads = queue
-                .filter(a => a.type === 'ADD_LEAD' && a.payload.area_id === areaId)
-                .map(a => ({ ...a.payload, id: a.id, isPending: true }));
-            return pendingLeads as Lead[];
+            return data || [];
+        } catch {
+            return [];
         } finally {
             setLoading(false);
         }
@@ -192,16 +160,17 @@ export const useCRM = () => {
 
     useEffect(() => {
         fetchAreas();
-    }, [queue.length]); // Re-fetch/merge when queue changes
+    }, [queue.length]);
 
+    // NEVER return undefined
     return {
-        areas: Array.isArray(areas) ? areas : [],
+        areas: areas || [],
         loading: !!loading,
-        error: error ?? null,
+        error: error || null,
         fetchAreas,
-        addArea: typeof addArea === 'function' ? addArea : async () => null,
-        addLead: typeof addLead === 'function' ? addLead : async () => null,
-        fetchLeadsInArea: typeof fetchLeadsInArea === 'function' ? fetchLeadsInArea : async () => [],
+        addArea,
+        addLead,
+        fetchLeadsInArea,
         pendingCount: queue.length || 0
     };
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,25 +9,26 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
-
-/**
- * IMPORTANT:
- * Path MUST be correct.
- * If your folder is mobile-app/src/hooks/useCRM.ts
- */
 import { useCRM } from '../src/hooks/useCRM';
+import { Feather } from '@expo/vector-icons';
 
-import { Feather, Ionicons } from '@expo/vector-icons';
-
+// Validated Icon Component Wrapper
+const Icon = ({ name, color, size = 18 }: { name: keyof typeof Feather.glyphMap; color: string; size?: number }) => {
+  return <Feather name={name} size={size} color={color} />;
+};
 
 export default function AddLeadScreen() {
   const router = useRouter();
-  const { areas, addArea, addLead, loading, error } = useCRM();
+  const crm = useCRM();
 
-  /* -------- Form State -------- */
+  // Safety: destruct with defaults
+  const { areas = [], addArea, addLead, loading = false, error } = crm || {};
+
+  // Form State
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [areaId, setAreaId] = useState('');
@@ -35,15 +36,14 @@ export default function AddLeadScreen() {
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
 
-  /* -------- Area UI -------- */
+  // Area Modal State
   const [areaModal, setAreaModal] = useState(false);
   const [addAreaMode, setAddAreaMode] = useState(false);
   const [newArea, setNewArea] = useState('');
   const [newCity, setNewCity] = useState('');
 
-  const formValid = name.trim() && phone.trim() && areaId;
+  const formValid = name.trim().length > 0 && phone.trim().length > 0 && areaId.length > 0;
 
-  /* -------- GPS -------- */
   const captureLocation = async () => {
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
@@ -51,20 +51,24 @@ export default function AddLeadScreen() {
         Alert.alert('Location denied', 'GPS is optional.');
         return;
       }
-
       const loc = await Location.getCurrentPositionAsync({});
-      setLat(loc.coords.latitude);
-      setLng(loc.coords.longitude);
-    } catch {
+      if (loc && loc.coords) {
+        setLat(loc.coords.latitude);
+        setLng(loc.coords.longitude);
+      }
+    } catch (e) {
       Alert.alert('GPS Error', 'Unable to capture location.');
     }
   };
 
-  /* -------- Save Area -------- */
   const saveArea = async () => {
     if (!newArea.trim()) return;
+    if (!addArea) {
+      Alert.alert('Error', 'CRM offline or unavailable');
+      return;
+    }
     const res = await addArea(newArea.trim(), newCity.trim());
-    if (res) {
+    if (res && res.id) {
       setAreaId(res.id);
       setAddAreaMode(false);
       setAreaModal(false);
@@ -75,9 +79,12 @@ export default function AddLeadScreen() {
     }
   };
 
-  /* -------- Save Lead -------- */
   const saveLead = async () => {
     if (!formValid) return;
+    if (!addLead) {
+      Alert.alert('Error', 'CRM initialized incorrectly');
+      return;
+    }
 
     const res = await addLead({
       name: name.trim(),
@@ -88,202 +95,175 @@ export default function AddLeadScreen() {
       longitude: lng || undefined,
     });
 
-    if (res?.error === 'duplicate') {
+    if (res && (res as any).error === 'duplicate') {
       Alert.alert('Duplicate Party', 'Phone number already exists.');
       return;
     }
 
+    const isPending = res && (res as any).isPending;
     Alert.alert(
-      res?.isPending ? 'Saved Offline' : 'Success',
-      res?.isPending
-        ? 'Party saved offline. Will sync automatically.'
-        : 'Party added successfully.',
+      isPending ? 'Saved Offline' : 'Success',
+      isPending ? 'Party saved offline. Will sync automatically.' : 'Party added successfully.',
       [{ text: 'OK', onPress: () => router.back() }]
     );
   };
 
-  const selectedArea =
-    areas.find(a => a.id === areaId)?.name || 'Select Area';
+  const selectedAreaObj = areas.find(a => a.id === areaId);
+  const selectedAreaName = selectedAreaObj ? selectedAreaObj.name : 'Select Area';
 
   return (
     <View style={s.container}>
       <ScrollView contentContainerStyle={s.body}>
         <Text style={s.title}>Add New Party</Text>
 
-        {/* Name */}
-        <Field label="Party Name *" icon={<Feather name="user-plus" size={18} color="#fff" />}>
-          <TextInput value={name} onChangeText={setName} style={s.input} />
+        <Field label="Party Name *" icon={<Icon name="user-plus" color={COLORS.gold} />}>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            style={s.input}
+            placeholder="Enter Name"
+            placeholderTextColor="#666"
+          />
         </Field>
 
-        {/* Phone */}
-        <Field label="Phone *" icon={<Feather name="phone" size={18} color="#fff" />}>
+        <Field label="Phone *" icon={<Icon name="phone" color={COLORS.gold} />}>
           <TextInput
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
             style={s.input}
+            placeholder="Enter Phone"
+            placeholderTextColor="#666"
           />
         </Field>
 
-        {/* Area */}
-        <Field label="Area *" icon={<Feather name="map" size={18} color="#fff" />}>
-          <TouchableOpacity
-            style={s.selector}
-            onPress={() => setAreaModal(true)}
-          >
-            <Text style={s.selectorText}>{selectedArea}</Text>
-            <Feather name="chevron-down" size={18} color="#fff" />
+        <Field label="Area *" icon={<Icon name="map" color={COLORS.gold} />}>
+          <TouchableOpacity style={s.selector} onPress={() => setAreaModal(true)}>
+            <Text style={s.selectorText}>{selectedAreaName}</Text>
+            <Icon name="chevron-down" color={COLORS.gold} />
           </TouchableOpacity>
         </Field>
 
-        {/* Address */}
         <Field label="Address">
           <TextInput
             value={address}
             onChangeText={setAddress}
             multiline
-            style={[s.input, { height: 80 }]}
+            style={[s.input, { height: 80, textAlignVertical: 'top' }]}
+            placeholder="Full Address (Optional)"
+            placeholderTextColor="#666"
           />
         </Field>
 
-        {/* GPS */}
         <TouchableOpacity style={s.gpsBtn} onPress={captureLocation}>
-          <Ionicons name="locate" size={18} color="#fff" />
-          <Text style={s.gpsText}>
-            {lat ? 'Update Location' : 'Capture Location'}
-          </Text>
+          <Icon name="map-pin" color={COLORS.gold} />
+          <Text style={s.gpsText}>{lat ? 'Update Location' : 'Capture Location'}</Text>
         </TouchableOpacity>
 
-        {lat && (
-          <Text style={s.coords}>
-            {lat.toFixed(6)}, {lng?.toFixed(6)}
-          </Text>
-        )}
+        {lat ? (
+          <Text style={s.coords}>{lat.toFixed(6)}, {lng?.toFixed(6)}</Text>
+        ) : null}
       </ScrollView>
 
-      {/* Save */}
       <TouchableOpacity
-        style={[s.save, !formValid && s.disabled]}
+        style={[s.save, (!formValid || loading) && s.disabled]}
         disabled={!formValid || loading}
         onPress={saveLead}
       >
-        {loading ? <ActivityIndicator /> : <Text>Save Party</Text>}
+        {loading ? <ActivityIndicator color="#000" /> : <Text style={s.saveText}>Save Party</Text>}
       </TouchableOpacity>
 
-      {/* Area Modal */}
-      <Modal visible={areaModal} animationType="slide">
-        <View style={s.modal}>
-          <Text style={s.modalTitle}>Select Area</Text>
-
-          {!addAreaMode ? (
-            <>
-              <ScrollView>
-                {areas.map(a => (
-                  <TouchableOpacity
-                    key={a.id}
-                    style={s.areaItem}
-                    onPress={() => {
-                      setAreaId(a.id);
-                      setAreaModal(false);
-                    }}
-                  >
-                    <Text>{a.name}</Text>
+      <Modal visible={areaModal} animationType="slide" transparent={true} onRequestClose={() => setAreaModal(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.modal}>
+            <Text style={s.modalTitle}>Select Area</Text>
+            {!addAreaMode ? (
+              <>
+                <ScrollView style={{ maxHeight: 300 }}>
+                  {areas.map(a => (
+                    <TouchableOpacity key={a.id} style={s.areaItem} onPress={() => { setAreaId(a.id); setAreaModal(false); }}>
+                      <Text style={s.areaItemText}>{a.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {areas.length === 0 && <Text style={{ color: '#666', padding: 10 }}>No areas found.</Text>}
+                </ScrollView>
+                <TouchableOpacity style={s.addBtn} onPress={() => setAddAreaMode(true)}>
+                  <Icon name="plus" color="#000" />
+                  <Text style={s.addBtnText}>Add New Area</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TextInput placeholder="Area name" placeholderTextColor="#666" value={newArea} onChangeText={setNewArea} style={[s.input, s.modalInput]} />
+                <TextInput placeholder="City (optional)" placeholderTextColor="#666" value={newCity} onChangeText={setNewCity} style={[s.input, s.modalInput]} />
+                <View style={s.modalButtons}>
+                  <TouchableOpacity style={[s.save, { flex: 1, margin: 0, marginRight: 8 }]} onPress={saveArea}>
+                    <Text style={s.saveText}>Save</Text>
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <TouchableOpacity
-                style={s.addBtn}
-                onPress={() => setAddAreaMode(true)}
-              >
-                <Feather name="plus" size={18} color="#000" />
-                <Text>Add New Area</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <TextInput
-                placeholder="Area name"
-                value={newArea}
-                onChangeText={setNewArea}
-                style={s.input}
-              />
-              <TextInput
-                placeholder="City (optional)"
-                value={newCity}
-                onChangeText={setNewCity}
-                style={s.input}
-              />
-              <TouchableOpacity style={s.save} onPress={saveArea}>
-                <Text>Save Area</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          <TouchableOpacity onPress={() => setAreaModal(false)}>
-            <Text style={s.close}>Close</Text>
-          </TouchableOpacity>
+                  <TouchableOpacity style={[s.cancelBtn, { flex: 1 }]} onPress={() => setAddAreaMode(false)}>
+                    <Text style={s.cancelText}>Back</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+            <TouchableOpacity onPress={() => setAreaModal(false)} style={s.closeBtn}>
+              <Text style={s.close}>Close</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </Modal>
     </View>
   );
 }
 
-/* ---------- Small Helper ---------- */
 function Field({ label, icon, children }: any) {
   return (
     <View style={{ marginBottom: 16 }}>
       <Text style={s.label}>{label}</Text>
       <View style={s.field}>
-        {icon}
+        {icon ? <View style={{ marginRight: 10 }}>{icon}</View> : null}
         {children}
       </View>
     </View>
   );
 }
 
-/* ---------- Styles ---------- */
+const COLORS = {
+  gold: '#D4AF37',
+  lemon: '#A3E635',
+  bg: '#09090b',
+  card: '#18181b',
+  border: '#27272a',
+  text: '#fff',
+  subtext: '#a1a1aa'
+};
+
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: COLORS.bg },
   body: { padding: 20 },
-  title: { fontSize: 24, color: '#fff', marginBottom: 20 },
-  label: { color: '#888', marginBottom: 6 },
-  field: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
-    borderRadius: 12,
-    padding: 12,
-  },
-  input: { flex: 1, color: '#fff', marginLeft: 10 },
-  selector: { flexDirection: 'row', justifyContent: 'space-between', flex: 1 },
-  selectorText: { color: '#fff' },
-  gpsBtn: {
-    flexDirection: 'row',
-    gap: 10,
-    padding: 12,
-    backgroundColor: '#222',
-    borderRadius: 12,
-    marginTop: 10,
-  },
-  gpsText: { color: '#fff' },
-  coords: { color: '#888', marginTop: 6 },
-  save: {
-    backgroundColor: '#3b82f6',
-    padding: 16,
-    alignItems: 'center',
-    margin: 16,
-    borderRadius: 12,
-  },
-  disabled: { opacity: 0.5 },
-  modal: { flex: 1, padding: 20 },
-  modalTitle: { fontSize: 20, marginBottom: 10 },
-  areaItem: {
-    padding: 14,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-  },
-  addBtn: { padding: 14, backgroundColor: '#eee', marginTop: 10 },
-  close: { textAlign: 'center', marginTop: 20 },
+  title: { fontSize: 24, fontWeight: 'bold', color: COLORS.text, marginBottom: 20 },
+  label: { color: COLORS.gold, marginBottom: 6, fontSize: 12, fontWeight: 'bold', letterSpacing: 0.5 },
+  field: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 12, backgroundColor: COLORS.card },
+  input: { flex: 1, color: COLORS.text, fontSize: 16 },
+  selector: { flexDirection: 'row', justifyContent: 'space-between', flex: 1, alignItems: 'center' },
+  selectorText: { color: COLORS.text, fontSize: 16 },
+  gpsBtn: { flexDirection: 'row', gap: 10, padding: 16, backgroundColor: COLORS.card, borderRadius: 12, marginTop: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.gold },
+  gpsText: { color: COLORS.gold, fontWeight: 'bold' },
+  coords: { color: COLORS.subtext, marginTop: 8, textAlign: 'center', fontSize: 12 },
+  save: { backgroundColor: COLORS.gold, padding: 16, alignItems: 'center', margin: 16, borderRadius: 12 },
+  saveText: { color: '#000', fontWeight: 'bold', fontSize: 16 },
+  disabled: { opacity: 0.5, backgroundColor: COLORS.border },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 },
+  modal: { backgroundColor: COLORS.card, borderRadius: 20, padding: 24, borderWidth: 1, borderColor: COLORS.gold },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.gold, marginBottom: 20 },
+  areaItem: { padding: 16, borderBottomWidth: 1, borderColor: COLORS.border },
+  areaItemText: { color: COLORS.text, fontSize: 16 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: COLORS.lemon, borderRadius: 12, marginTop: 16, gap: 8 },
+  addBtnText: { color: '#000', fontWeight: 'bold' },
+  modalInput: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 16, marginBottom: 12, color: COLORS.text },
+  modalButtons: { flexDirection: 'row', marginTop: 12 },
+  cancelBtn: { backgroundColor: COLORS.border, padding: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  cancelText: { color: COLORS.text, fontWeight: 'bold' },
+  closeBtn: { marginTop: 16, alignItems: 'center' },
+  close: { color: COLORS.subtext, fontSize: 14 },
 });
