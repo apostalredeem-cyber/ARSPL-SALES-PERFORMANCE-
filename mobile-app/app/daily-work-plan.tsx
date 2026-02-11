@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react';  
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
 import { useLeads } from '../src/hooks/useLeads';
 import { useCRM, Area } from '../src/hooks/useCRM';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 
 interface RoutePoint {
