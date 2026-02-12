@@ -1,4 +1,4 @@
-import React, { useState } from 'react';  
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDailyWorkPlan } from '../src/hooks/useDailyWorkPlan';
@@ -6,8 +6,6 @@ import { useLeads } from '../src/hooks/useLeads';
 import { useCRM, Area } from '../src/hooks/useCRM';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
-
 
 interface RoutePoint {
     id: string;
@@ -24,7 +22,7 @@ export default function DailyWorkPlanScreen() {
     const router = useRouter();
     const { createWorkPlan, loading, error: planError } = useDailyWorkPlan();
     const { leads: assignedLeads } = useLeads();
-    const { areas, fetchLeadsInArea, loading: crmLoading } = useCRM();
+    const { areas, fetchAreas, fetchLeadsInArea, loading: crmLoading } = useCRM();
 
     const [routePoints, setRoutePoints] = useState<RoutePoint[]>([
         { id: '1', lead_id: '', name: '', sequence: 1, client_type: 'Retailer', objective: 'Intro', expected_value: '', priority: 'med' }
@@ -42,16 +40,44 @@ export default function DailyWorkPlanScreen() {
     // Auto-calculate total expected business value
     const totalValue = routePoints.reduce((sum, p) => sum + (parseFloat(p.expected_value) || 0), 0);
 
+    useFocusEffect(
+        useCallback(() => {
+            let active = true;
+
+            const refresh = async () => {
+                await fetchAreas();
+
+                for (const pointId in selectedAreaForPoint) {
+                    const areaId = selectedAreaForPoint[pointId];
+                    if (!areaId) continue;
+
+                    const leads = await fetchLeadsInArea(areaId);
+
+                    if (active) {
+                        setTempLeads(prev => ({
+                            ...prev,
+                            [pointId]: leads
+                        }));
+                    }
+                }
+            };
+
+            refresh();
+
+            return () => {
+                active = false;
+            };
+        }, [selectedAreaForPoint])
+    );
+
     const addRoutePoint = () => {
-        const currentPoints = Array.isArray(routePoints) ? routePoints : [];
-        const newId = (currentPoints.length + 1).toString();
-        setRoutePoints([
-            ...currentPoints,
+        setRoutePoints(prev => [
+            ...prev,
             {
-                id: newId,
+                id: (prev.length + 1).toString(),
                 lead_id: '',
                 name: '',
-                sequence: currentPoints.length + 1,
+                sequence: prev.length + 1,
                 client_type: 'Retailer',
                 objective: 'Intro',
                 expected_value: '',
@@ -65,18 +91,28 @@ export default function DailyWorkPlanScreen() {
             Alert.alert('Error', 'You must have at least one route point.');
             return;
         }
-        const filtered = routePoints.filter(p => p && p.id !== id);
-        // Resequence
-        const resequenced = filtered.map((p, idx) => ({ ...p, sequence: idx + 1 }));
-        setRoutePoints(resequenced);
+        setRoutePoints(prev => {
+            const filtered = prev.filter(p => p.id !== id);
+            return filtered.map((p, idx) => ({
+                ...p,
+                sequence: idx + 1
+            }));
+        });
     };
 
     const updateRoutePoint = (id: string, field: keyof RoutePoint, value: any) => {
-        setRoutePoints(routePoints.map(p => p.id === id ? { ...p, [field]: value } : p));
+        setRoutePoints(prev =>
+            prev.map(p =>
+                p.id === id ? { ...p, [field]: value } : p
+            )
+        );
     };
 
     const handleAreaSelect = async (pointId: string, area: Area) => {
-        setSelectedAreaForPoint(prev => ({ ...prev, [pointId]: area.id }));
+        setSelectedAreaForPoint(prev => ({
+            ...prev,
+            [pointId]: area.id
+        }));
         setActiveAreaPicker(null);
 
         // Reset lead for this point
@@ -85,20 +121,31 @@ export default function DailyWorkPlanScreen() {
 
         // Fetch leads for this area
         const areaLeads = await fetchLeadsInArea(area.id);
-        setTempLeads(prev => ({ ...prev, [pointId]: areaLeads }));
+
+        setTempLeads(prev => ({
+            ...prev,
+            [pointId]: areaLeads
+        }));
 
         // Open lead picker automatically for better UX
         setActiveLeadPicker(pointId);
     };
 
     const selectLead = (pointId: string, lead: any) => {
-        setRoutePoints(routePoints.map(p => p.id === pointId ? {
-            ...p,
-            lead_id: lead.id,
-            name: lead.name,
-            client_type: lead.client_type || p.client_type,
-            expected_value: lead.expected_value?.toString() || p.expected_value
-        } : p));
+        setRoutePoints(prev =>
+            prev.map(p =>
+                p.id === pointId
+                    ? {
+                        ...p,
+                        lead_id: lead.id,
+                        name: lead.name,
+                        client_type: lead.client_type || p.client_type,
+                        expected_value:
+                            lead.expected_value?.toString() || p.expected_value
+                    }
+                    : p
+            )
+        );
         setActiveLeadPicker(null);
     };
 
