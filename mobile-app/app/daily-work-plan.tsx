@@ -24,15 +24,7 @@ export default function DailyWorkPlanScreen() {
     // const { leads: assignedLeads } = useLeads(); // Unused currently
     const { areas, fetchAreas, fetchLeadsInArea, loading: crmLoading } = useCRM();
 
-    // Loading guard to prevent flicker
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#007AFF" />
-            </View>
-        );
-    }
-
+    // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
     const [routePoints, setRoutePoints] = useState<RoutePoint[]>([
         { id: '1', lead_id: '', name: '', sequence: 1, client_type: 'Retailer', objective: 'Intro', expected_value: '', priority: 'med' }
     ]);
@@ -98,6 +90,15 @@ export default function DailyWorkPlanScreen() {
             };
         }, [selectedAreaForPoint]) // Dependency on selection ensures we fetch when selection changes too, though manual select also triggers it.
     );
+
+    // Loading guard to prevent flicker
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+        );
+    }
 
     const addRoutePoint = () => {
         setRoutePoints((prev: RoutePoint[]) => [

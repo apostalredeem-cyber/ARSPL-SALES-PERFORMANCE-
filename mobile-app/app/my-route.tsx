@@ -61,9 +61,7 @@ function MyRouteContent() {
     // SINGLE SOURCE OF TRUTH: Derive route directly from currentPlan
     const route = currentPlan?.planned_leads ?? [];
 
-    console.log('[ROUTE] Rendering route:', route);
-    console.log('[ROUTE] Current plan status:', currentPlan?.status);
-
+    // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS
     useEffect(() => {
         // Initial state reset to ensure no carry-over
         setLocations([]);
@@ -74,6 +72,9 @@ function MyRouteContent() {
             setFetchingLogs(false);
         }
     }, [user, currentPlan?.status]);
+
+    console.log('[ROUTE] Rendering route:', route);
+    console.log('[ROUTE] Current plan status:', currentPlan?.status);
 
     async function fetchTodayLogs() {
         if (!user) return;
