@@ -21,7 +21,7 @@ interface RoutePoint {
 export default function DailyWorkPlanScreen() {
     const router = useRouter();
     const { createWorkPlan, loading, error: planError } = useDailyWorkPlan();
-    const { leads: assignedLeads } = useLeads();
+    // const { leads: assignedLeads } = useLeads(); // Unused currently
     const { areas, fetchAreas, fetchLeadsInArea, loading: crmLoading } = useCRM();
 
     const [routePoints, setRoutePoints] = useState<RoutePoint[]>([
@@ -38,27 +38,47 @@ export default function DailyWorkPlanScreen() {
     const [selectedAreaForPoint, setSelectedAreaForPoint] = useState<Record<string, string>>({}); // PointID -> AreaID
 
     // Auto-calculate total expected business value
-    const totalValue = routePoints.reduce((sum, p) => sum + (parseFloat(p.expected_value) || 0), 0);
+    const totalValue = routePoints.reduce((sum: number, p: RoutePoint) => sum + (parseFloat(p.expected_value) || 0), 0);
 
+    // Optimized data refresher
     useFocusEffect(
         useCallback(() => {
             let active = true;
 
             const refresh = async () => {
-                await fetchAreas();
+                try {
+                    // Parallel fetch for speed
+                    // Always refresh areas first
+                    await fetchAreas();
 
-                for (const pointId in selectedAreaForPoint) {
-                    const areaId = selectedAreaForPoint[pointId];
-                    if (!areaId) continue;
+                    // Then refresh leads for any currently selected areas
+                    // This handles the "come back from add-lead" scenario
+                    if (!active) return;
 
-                    const leads = await fetchLeadsInArea(areaId);
+                    const fetchPromises = Object.entries(selectedAreaForPoint).map(async ([pointId, areaId]) => {
+                        if (!areaId) return null;
+                        const leads = await fetchLeadsInArea(areaId);
+                        return { pointId, leads };
+                    });
+
+                    const results = await Promise.all(fetchPromises);
 
                     if (active) {
+                        const newTempLeads: Record<string, any[]> = {};
+                        results.forEach(res => {
+                            if (res) {
+                                newTempLeads[res.pointId] = res.leads;
+                            }
+                        });
+
+                        // Functional update to merge only if different
                         setTempLeads(prev => ({
                             ...prev,
-                            [pointId]: leads
+                            ...newTempLeads
                         }));
                     }
+                } catch (e) {
+                    console.error('Refresh error in focus effect:', e);
                 }
             };
 
@@ -67,11 +87,11 @@ export default function DailyWorkPlanScreen() {
             return () => {
                 active = false;
             };
-        }, [selectedAreaForPoint])
+        }, [selectedAreaForPoint]) // Dependency on selection ensures we fetch when selection changes too, though manual select also triggers it.
     );
 
     const addRoutePoint = () => {
-        setRoutePoints(prev => [
+        setRoutePoints((prev: RoutePoint[]) => [
             ...prev,
             {
                 id: (prev.length + 1).toString(),
@@ -91,9 +111,9 @@ export default function DailyWorkPlanScreen() {
             Alert.alert('Error', 'You must have at least one route point.');
             return;
         }
-        setRoutePoints(prev => {
-            const filtered = prev.filter(p => p.id !== id);
-            return filtered.map((p, idx) => ({
+        setRoutePoints((prev: RoutePoint[]) => {
+            const filtered = prev.filter((p: RoutePoint) => p.id !== id);
+            return filtered.map((p: RoutePoint, idx: number) => ({
                 ...p,
                 sequence: idx + 1
             }));
@@ -101,15 +121,15 @@ export default function DailyWorkPlanScreen() {
     };
 
     const updateRoutePoint = (id: string, field: keyof RoutePoint, value: any) => {
-        setRoutePoints(prev =>
-            prev.map(p =>
+        setRoutePoints((prev: RoutePoint[]) =>
+            prev.map((p: RoutePoint) =>
                 p.id === id ? { ...p, [field]: value } : p
             )
         );
     };
 
     const handleAreaSelect = async (pointId: string, area: Area) => {
-        setSelectedAreaForPoint(prev => ({
+        setSelectedAreaForPoint((prev: Record<string, string>) => ({
             ...prev,
             [pointId]: area.id
         }));
@@ -122,38 +142,59 @@ export default function DailyWorkPlanScreen() {
         // Fetch leads for this area
         const areaLeads = await fetchLeadsInArea(area.id);
 
-        setTempLeads(prev => ({
+        setTempLeads((prev: Record<string, any[]>) => ({
             ...prev,
             [pointId]: areaLeads
         }));
 
-        // Open lead picker automatically for better UX
+        // Open lead picker automatically
         setActiveLeadPicker(pointId);
     };
 
     const selectLead = (pointId: string, lead: any) => {
-        setRoutePoints(prev =>
-            prev.map(p =>
+        // Validation: Must have a business_id if we have migrated.
+        const idToUse = lead.business_id || lead.id;
+
+        if (!idToUse) {
+            console.warn('Selected lead has no ID/BusinessID', lead);
+            return;
+        }
+
+        setRoutePoints((prev: RoutePoint[]) =>
+            prev.map((p: RoutePoint) =>
                 p.id === pointId
                     ? {
                         ...p,
-                        lead_id: lead.id,
+                        lead_id: String(idToUse),
                         name: lead.name,
                         client_type: lead.client_type || p.client_type,
                         expected_value:
-                            lead.expected_value?.toString() || p.expected_value
+                            lead.expected_value?.toString() || p.expected_value,
                     }
                     : p
             )
         );
+
         setActiveLeadPicker(null);
     };
 
     const handleActivatePlan = async () => {
         // Validate
-        const validPoints = routePoints.filter(p => p.lead_id !== '');
+        const validPoints = routePoints.filter(
+            (p: RoutePoint) => p.lead_id && typeof p.lead_id === 'string' && p.lead_id.trim().length > 0
+        );
+
         if (validPoints.length === 0) {
-            Alert.alert('Validation Error', 'Please select at least one lead for your plan.');
+            Alert.alert('Validation Error', 'Please select at least one party/lead for your plan.');
+            return;
+        }
+
+        const hasEmptyPoints = routePoints.some(
+            (p: RoutePoint) => !p.lead_id || typeof p.lead_id !== 'string' || p.lead_id.trim().length === 0
+        );
+
+        if (hasEmptyPoints) {
+            Alert.alert('Validation Error', 'Some route points are empty. Please select a party or remove the point.');
             return;
         }
 
@@ -165,8 +206,7 @@ export default function DailyWorkPlanScreen() {
         setSubmitting(true);
 
         try {
-            // Create work plan using relational leads (Block 2 hook signature)
-            const plannedLeads = validPoints.map(p => ({
+            const plannedLeads = validPoints.map((p: RoutePoint) => ({
                 lead_id: p.lead_id,
                 sequence: p.sequence,
                 objective: p.objective,
@@ -186,6 +226,7 @@ export default function DailyWorkPlanScreen() {
                 { text: 'OK', onPress: () => router.replace('/') }
             ]);
         } catch (err: any) {
+            console.error('handleActivatePlan error:', err);
             Alert.alert('Error', err.message || 'An unexpected error occurred.');
         } finally {
             setSubmitting(false);
@@ -251,7 +292,7 @@ export default function DailyWorkPlanScreen() {
                                     ) : (tempLeads[point.id] || []).length === 0 ? (
                                         <Text style={styles.emptyLeads}>No parties found in this area.</Text>
                                     ) : (
-                                        (tempLeads[point.id] || []).map(lead => (
+                                        (tempLeads[point.id] || []).map((lead: any) => (
                                             <TouchableOpacity
                                                 key={lead.id}
                                                 style={styles.leadOption}
@@ -259,6 +300,7 @@ export default function DailyWorkPlanScreen() {
                                             >
                                                 <Text style={styles.leadOptionName}>{lead.name}</Text>
                                                 <Text style={styles.leadOptionType}>{lead.client_type} • {lead.phone_number}</Text>
+                                                {lead.business_id && <Text style={[styles.leadOptionType, { fontSize: 10 }]}>{lead.business_id}</Text>}
                                             </TouchableOpacity>
                                         ))
                                     )}

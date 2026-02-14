@@ -86,26 +86,36 @@ export default function AddLeadScreen() {
       return;
     }
 
-    const res = await addLead({
-      name: name.trim(),
-      phone_number: phone.trim(),
-      area_id: areaId,
-      address: address || undefined,
-      latitude: lat || undefined,
-      longitude: lng || undefined,
-    });
+    try {
+      const res = await addLead({
+        name: name.trim(),
+        phone_number: phone.trim(),
+        area_id: areaId,
+        address: address || undefined,
+        latitude: lat || undefined,
+        longitude: lng || undefined,
+        client_type: 'Retailer', // Default, could be added to UI later
+      });
 
-    if (res && (res as any).error === 'duplicate') {
-      Alert.alert('Duplicate Party', 'Phone number already exists.');
-      return;
+      if (!res) {
+        Alert.alert('Error', 'Failed to save party. Please try again.');
+        return;
+      }
+
+      if ((res as any).error === 'duplicate') {
+        Alert.alert('Duplicate Party', 'Phone number already exists.');
+        return;
+      }
+
+      const isPending = (res as any).isPending;
+      Alert.alert(
+        isPending ? 'Saved Offline' : 'Success',
+        isPending ? 'Party saved offline. Will sync automatically.' : 'Party added successfully.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+    } catch (e) {
+      Alert.alert('Error', 'An unexpected error occurred.');
     }
-
-    const isPending = res && (res as any).isPending;
-    Alert.alert(
-      isPending ? 'Saved Offline' : 'Success',
-      isPending ? 'Party saved offline. Will sync automatically.' : 'Party added successfully.',
-      [{ text: 'OK', onPress: () => router.back() }]
-    );
   };
 
   const selectedAreaObj = areas.find(a => a.id === areaId);

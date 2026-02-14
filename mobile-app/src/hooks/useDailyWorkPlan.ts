@@ -19,18 +19,19 @@ export interface DailyWorkPlan {
     id: string;
     staff_id: string;
     date: string;
-    expected_start_time: string;
-    expected_end_time: string;
+    // Removed start_time and end_time columns as they do not exist
     status: 'draft' | 'active' | 'completed';
     created_at: string;
     activated_at: string | null;
     completed_at: string | null;
     meetings: Meeting[];
+    planned_route?: any; // To hold start_time, end_time, etc.
 }
 
 /**
  * Hook for managing the Daily Work Plan.
- * Migrated to a relational structure using work_plan_meetings table.
+ * FIX: Removed start_time/end_time columns from insert.
+ * FIX: Resolves business_id to UUID properly.
  */
 export const useDailyWorkPlan = () => {
     const { user } = useAuth();
@@ -53,7 +54,7 @@ export const useDailyWorkPlan = () => {
         const today = new Date().toISOString().split('T')[0];
 
         try {
-            // 1. Fetch the work plan safely (avoiding .single() as per guardrails)
+            // 1. Fetch the work plan safely
             const { data: plans, error: planError } = await (supabase as any)
                 .from('daily_work_plans')
                 .select('*')
@@ -71,7 +72,6 @@ export const useDailyWorkPlan = () => {
             const planData = plans[0];
 
             // 2. Fetch associated meetings with lead details
-            // Null-safe join: lead may be null if data is missing or leads table is empty
             const { data: meetingData, error: meetingError } = await (supabase as any)
                 .from('work_plan_meetings')
                 .select('*, lead:leads(*)')
@@ -85,7 +85,7 @@ export const useDailyWorkPlan = () => {
                 ...planData,
                 meetings: (meetingData || []).map((m: any) => ({
                     ...m,
-                    lead: m.lead || null // Explicit null for missing leads
+                    lead: m.lead || null
                 }))
             });
         } catch (err: any) {
@@ -111,45 +111,101 @@ export const useDailyWorkPlan = () => {
         const today = new Date().toISOString().split('T')[0];
 
         try {
-            // 1. Insert the main work plan record
+            // 1. Resolve business_ids to UUIDs
+            const businessIds = plannedLeads.map(p => p.lead_id);
+            const { data: leadsData, error: leadsError } = await (supabase as any)
+                .from('leads')
+                .select('id, business_id')
+                .in('business_id', businessIds);
+
+            if (leadsError) {
+                console.error('Error resolving business IDs:', leadsError);
+                throw leadsError;
+            }
+
+            // Map business_id to UUID
+            const leadMap = new Map();
+            leadsData?.forEach((l: any) => leadMap.set(l.business_id, l.id));
+
+            const meetingsToInsert = [];
+            const resolvedPointsForJson = [];
+
+            for (const p of plannedLeads) {
+                const uuid = leadMap.get(p.lead_id);
+                if (!uuid) {
+                    console.warn(`Lead not found for business_id: ${p.lead_id}`);
+                    continue; // Skip invalid leads
+                }
+
+                // Prepare meeting record
+                meetingsToInsert.push({
+                    // work_plan_id will be added later
+                    lead_id: uuid,
+                    sequence: p.sequence,
+                    objective: p.objective || 'Intro',
+                    priority: p.priority || 'med',
+                    expected_value: p.expected_value || 0,
+                    status: 'pending'
+                });
+
+                // Prepare JSON record (keep original business_id or use UUID? keeping original input is usually better for reference, but UUID is safer)
+                // User said: "Use UUID id in planned_leads"
+                resolvedPointsForJson.push({
+                    ...p,
+                    lead_id: uuid // Replace business_id with UUID in the JSON storage as requested
+                });
+            }
+
+            if (meetingsToInsert.length === 0) {
+                throw new Error('No valid leads found to create plan.');
+            }
+
+            // 2. Prepare JSON structure for planned_route
+            const plannedRouteJson = {
+                start_time: expectedStartTime,
+                end_time: expectedEndTime,
+                points: resolvedPointsForJson
+            };
+
+            // 3. Insert the main work plan record
+            // NOTE: removing expected_start_time and expected_end_time columns
             const { data: plan, error: planError } = await (supabase as any)
                 .from('daily_work_plans')
                 .insert({
                     staff_id: user.id,
                     date: today,
-                    expected_start_time: expectedStartTime,
-                    expected_end_time: expectedEndTime,
                     status: 'draft',
+                    planned_route: plannedRouteJson
                 })
                 .select()
                 .single();
 
-            if (planError) throw planError;
+            if (planError) {
+                console.error('Error creating daily_work_plans:', planError);
+                throw planError;
+            }
 
-            // 2. Insert relational meetings
-            if (plannedLeads.length > 0) {
-                const meetingsToInsert = plannedLeads.map(item => ({
-                    work_plan_id: plan.id,
-                    lead_id: item.lead_id,
-                    sequence: item.sequence,
-                    objective: item.objective || 'Intro',
-                    priority: item.priority || 'med',
-                    expected_value: item.expected_value || 0,
-                    status: 'pending'
-                }));
+            // 4. Insert relational meetings
+            const finalMeetings = meetingsToInsert.map(m => ({
+                work_plan_id: plan.id,
+                ...m
+            }));
 
-                const { error: mError } = await (supabase as any)
-                    .from('work_plan_meetings')
-                    .insert(meetingsToInsert);
+            const { error: mError } = await (supabase as any)
+                .from('work_plan_meetings')
+                .insert(finalMeetings);
 
-                if (mError) throw mError;
+            if (mError) {
+                console.error('Error creating work_plan_meetings:', mError);
+                throw mError;
             }
 
             await fetchTodayPlan(); // Refresh full relational data
             return true;
         } catch (err: any) {
+            console.error('createWorkPlan Exception:', err);
             setError(err.message || 'Failed to create work plan');
-            return null;
+            return false;
         } finally {
             setLoading(false);
         }
@@ -188,7 +244,7 @@ export const useDailyWorkPlan = () => {
     };
 
     const addMeeting = async (meeting: {
-        lead_id: string;
+        lead_id: string; // business_id expected from UI
         sequence: number;
         objective?: string;
         expected_value?: number;
@@ -197,11 +253,22 @@ export const useDailyWorkPlan = () => {
         if (!user || !currentPlan) return false;
 
         try {
+            // Resolve business_id
+            const { data: leadData, error: leadError } = await (supabase as any)
+                .from('leads')
+                .select('id')
+                .eq('business_id', meeting.lead_id)
+                .single();
+
+            if (leadError || !leadData) {
+                throw new Error('Lead not found for business ID: ' + meeting.lead_id);
+            }
+
             const { error: mError } = await (supabase as any)
                 .from('work_plan_meetings')
                 .insert({
                     work_plan_id: currentPlan.id,
-                    lead_id: meeting.lead_id,
+                    lead_id: leadData.id,
                     sequence: meeting.sequence,
                     objective: meeting.objective || 'Intro',
                     priority: meeting.priority || 'med',
