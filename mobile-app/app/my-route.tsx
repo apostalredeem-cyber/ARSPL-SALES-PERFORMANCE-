@@ -50,13 +50,19 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
 function MyRouteContent() {
     const router = useRouter();
     const { user } = useAuth();
-    const { currentPlan, hasActiveWorkPlan, addMeeting, loading: planLoading } = useDailyWorkPlan();
+    const { currentPlan, hasActiveWorkPlan, updateWorkPlan, loading: planLoading } = useDailyWorkPlan();
 
     // SAFE STATE ENFORCEMENT
     const [locations, setLocations] = useState<{ latitude: number; longitude: number }[]>([]);
     const [fetchingLogs, setFetchingLogs] = useState(true);
     const [newMeetingName, setNewMeetingName] = useState('');
     const [addingMeeting, setAddingMeeting] = useState(false);
+
+    // SINGLE SOURCE OF TRUTH: Derive route directly from currentPlan
+    const route = currentPlan?.planned_leads ?? [];
+
+    console.log('[ROUTE] Rendering route:', route);
+    console.log('[ROUTE] Current plan status:', currentPlan?.status);
 
     useEffect(() => {
         // Initial state reset to ensure no carry-over
@@ -114,28 +120,39 @@ function MyRouteContent() {
     const handleAddMeeting = async () => {
         const name = newMeetingName.trim();
         if (!name) {
-            Alert.alert('Validation Error', 'Please enter a client/meeting name.');
+            Alert.alert('Validation Error', 'Please enter a client/location name.');
             return;
         }
 
         setAddingMeeting(true);
         try {
-            // IMMUTABLE ARRAY LOGIC
-            const currentMeetings = Array.isArray(currentPlan?.meetings) ? currentPlan.meetings : [];
-            const newSeq = currentMeetings.length + 1;
+            // Get current planned_leads
+            const currentLeads = currentPlan?.planned_leads ?? [];
+            const newSeq = currentLeads.length + 1;
 
-            const success = await addMeeting({
-                lead_id: name, // Using name as ID for ad-hoc entry if needed, but really should be a lead picker
-                sequence: newSeq
-            } as any);
+            // Create new lead entry
+            const newLead = {
+                lead_id: `manual-${Date.now()}`,
+                name: name,
+                sequence: newSeq,
+                objective: 'Manual Entry',
+                expected_value: 0,
+                priority: 'med'
+            };
+
+            console.log('[ROUTE] Adding new lead:', newLead);
+
+            // Update work plan with new lead
+            const success = await updateWorkPlan([...currentLeads, newLead]);
 
             if (success) {
                 setNewMeetingName('');
-                Alert.alert('Success', 'Meeting added successfully.');
+                Alert.alert('Success', 'Client added to route successfully.');
             } else {
                 Alert.alert('Error', 'Unable to add client. Check connection.');
             }
         } catch (err) {
+            console.error('[ROUTE] Add meeting error:', err);
             Alert.alert('Error', 'An unexpected error occurred during client addition.');
         } finally {
             setAddingMeeting(false);
@@ -160,9 +177,6 @@ function MyRouteContent() {
             </View>
         );
     }
-
-    // FINAL GUARD: Ensure meetings is always an array for .map()
-    const meetings = Array.isArray(currentPlan?.meetings) ? currentPlan.meetings : [];
 
     return (
         <View style={styles.container}>
@@ -216,73 +230,37 @@ function MyRouteContent() {
                         <Text style={styles.sectionTitle}>Planned Meetings</Text>
                     </View>
 
-                    {meetings.length > 0 ? (
-                        meetings.map((m: any, idx: number) => {
-                            const lead = m?.lead;
-                            const areaName = lead?.areas?.name || lead?.area?.name || 'No Area';
-                            const phone = lead?.phone_number || 'No Phone';
-                            const hasLocation = lead?.latitude && lead?.longitude;
-
-                            return (
-                                <View key={`meeting-${m.id || idx}`} style={styles.meetingItem}>
+                    {route.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyStateText}>Route is empty. Add your first meeting below.</Text>
+                        </View>
+                    ) : (
+                        route
+                            .sort((a: any, b: any) => (a.sequence ?? 0) - (b.sequence ?? 0))
+                            .map((lead: any, idx: number) => (
+                                <View key={`lead-${lead.lead_id || idx}`} style={styles.meetingItem}>
                                     <View style={styles.meetingBadge}>
-                                        <Text style={styles.meetingSeq}>{m?.sequence ?? (idx + 1)}</Text>
+                                        <Text style={styles.meetingSeq}>{lead.sequence ?? (idx + 1)}</Text>
                                     </View>
                                     <View style={{ flex: 1, gap: 4 }}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                             <Text style={styles.meetingName} numberOfLines={1}>
-                                                {lead?.name ?? 'Unknown Client'}
+                                                {lead.name || 'Unknown Client'}
                                             </Text>
-                                            {m.priority && (
-                                                <View style={[styles.priorityBadge, (styles as any)[`priorityBadge_${m.priority}`]]}>
-                                                    <Text style={styles.priorityText}>{m.priority.toUpperCase()}</Text>
+                                            {lead.priority && (
+                                                <View style={[styles.priorityBadge, (styles as any)[`priorityBadge_${lead.priority}`]]}>
+                                                    <Text style={styles.priorityText}>{lead.priority.toUpperCase()}</Text>
                                                 </View>
                                             )}
                                         </View>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                            <Text style={styles.metaText}>{areaName}</Text>
-                                            <Text style={styles.metaSeparator}>•</Text>
-                                            <Text style={styles.metaText}>{phone}</Text>
-                                            {!hasLocation && (
-                                                <>
-                                                    <Text style={styles.metaSeparator}>•</Text>
-                                                    <Text style={[styles.metaText, { color: '#f59e0b' }]}>📍 Location not set</Text>
-                                                </>
-                                            )}
-                                        </View>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                                            <Text style={styles.objectiveText}>{m.objective || 'Intro'}</Text>
+                                            <Text style={styles.objectiveText}>{lead.objective || 'Intro'}</Text>
                                             <Text style={styles.objectiveText}>•</Text>
-                                            <Text style={styles.objectiveText}>{lead?.client_type || 'Retailer'}</Text>
-                                            <Text style={styles.objectiveText}>•</Text>
-                                            <Text style={[styles.objectiveText, { color: m.status === 'visited' ? '#10b981' : '#a1a1aa' }]}>
-                                                {m.status?.toUpperCase() || 'PENDING'}
-                                            </Text>
+                                            <Text style={styles.objectiveText}>₹{lead.expected_value || 0}</Text>
                                         </View>
                                     </View>
-                                    {currentPlan?.status === 'active' && m.status !== 'visited' && (
-                                        <TouchableOpacity
-                                            style={styles.reportBtn}
-                                            onPress={() => router.push({
-                                                pathname: '/visit-report',
-                                                params: {
-                                                    leadName: lead?.name,
-                                                    meetingId: m.id,
-                                                    workPlanId: currentPlan.id
-                                                }
-                                            })}
-                                        >
-                                            <Feather name="message-square" size={16} color="#3b82f6" />
-                                            <Text style={styles.reportBtnText}>Report</Text>
-                                        </TouchableOpacity>
-                                    )}
                                 </View>
-                            );
-                        })
-                    ) : (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyStateText}>Route is empty. Add your first meeting below.</Text>
-                        </View>
+                            ))
                     )}
 
                     {/* Add Meeting Form */}

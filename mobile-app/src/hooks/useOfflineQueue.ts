@@ -43,8 +43,17 @@ export const useOfflineQueue = () => {
     }, []);
 
     const pushAction = useCallback(async (type: ActionType, payload: any) => {
+        // Generate proper UUID for action ID (not short random string)
+        const generateUUID = (): string => {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                const r = (Math.random() * 16) | 0;
+                const v = c === 'x' ? r : (r & 0x3) | 0x8;
+                return v.toString(16);
+            });
+        };
+
         const newAction: PendingAction = {
-            id: Math.random().toString(36).substring(7),
+            id: generateUUID(), // UUID format instead of short string
             type,
             payload,
             createdAt: Date.now(),

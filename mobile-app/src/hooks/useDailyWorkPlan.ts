@@ -1,303 +1,213 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
-import { Lead } from './useLeads';
 
-export interface Meeting {
-    id: string;
-    work_plan_id: string;
+interface PlannedLead {
     lead_id: string;
     sequence: number;
     objective: string;
-    priority: 'low' | 'med' | 'high';
     expected_value: number;
-    status: 'pending' | 'visited' | 'missed';
-    lead?: Lead;
+    priority: string;
 }
 
-export interface DailyWorkPlan {
+interface WorkPlan {
     id: string;
-    staff_id: string;
     date: string;
-    // Removed start_time and end_time columns as they do not exist
-    status: 'draft' | 'active' | 'completed';
-    created_at: string;
-    activated_at: string | null;
-    completed_at: string | null;
-    meetings: Meeting[];
-    planned_route?: any; // To hold start_time, end_time, etc.
+    status: string;
+    planned_leads: PlannedLead[];
+    planned_route?: any;
+    expected_start_time?: string;
+    expected_end_time?: string;
 }
 
-/**
- * Hook for managing the Daily Work Plan.
- * FIX: Removed start_time/end_time columns from insert.
- * FIX: Resolves business_id to UUID properly.
- */
 export const useDailyWorkPlan = () => {
-    const { user } = useAuth();
-    const [currentPlan, setCurrentPlan] = useState<DailyWorkPlan | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // Start as loading
     const [error, setError] = useState<string | null>(null);
+    const [currentPlan, setCurrentPlan] = useState<WorkPlan | null>(null);
 
-    useEffect(() => {
-        if (user) {
-            fetchTodayPlan();
-        }
-    }, [user?.id]);
-
+    /**
+     * Fetches the current user's work plan for today.
+     */
     const fetchTodayPlan = async () => {
-        if (!user) return;
-
-        setLoading(true);
-        setError(null);
-
-        const today = new Date().toISOString().split('T')[0];
-
         try {
-            // 1. Fetch the work plan safely
-            const { data: plans, error: planError } = await (supabase as any)
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return null;
+
+            const today = new Date().toISOString().split('T')[0];
+
+            console.log('[WORKPLAN] Fetching for date:', today);
+
+            // CRITICAL: Use exact schema - no nested relational selects
+            const { data, error: queryError } = await (supabase as any)
                 .from('daily_work_plans')
                 .select('*')
                 .eq('staff_id', user.id)
                 .eq('date', today)
-                .limit(1);
+                .maybeSingle();
 
-            if (planError) throw planError;
-
-            if (!plans || plans.length === 0) {
-                setCurrentPlan(null);
-                return;
+            if (queryError) {
+                console.error('[WORKPLAN] Error fetching work plan:', queryError);
+                return null;
             }
 
-            const planData = plans[0];
+            console.log('[WORKPLAN] Response:', data);
+            return data;
 
-            // 2. Fetch associated meetings with lead details
-            const { data: meetingData, error: meetingError } = await (supabase as any)
-                .from('work_plan_meetings')
-                .select('*, lead:leads(*)')
-                .eq('work_plan_id', planData.id)
-                .order('sequence');
-
-            if (meetingError) throw meetingError;
-
-            // Safe meetings aggregation
-            setCurrentPlan({
-                ...planData,
-                meetings: (meetingData || []).map((m: any) => ({
-                    ...m,
-                    lead: m.lead || null
-                }))
-            });
-        } catch (err: any) {
-            setError(err.message || 'Failed to fetch today\'s plan');
-        } finally {
-            setLoading(false);
+        } catch (err) {
+            console.error('[WORKPLAN] fetchTodayPlan error:', err);
+            return null;
         }
     };
 
-    const createWorkPlan = async (
-        plannedLeads: { lead_id: string; sequence: number; objective?: string; priority?: string; expected_value?: number }[],
-        expectedStartTime: string,
-        expectedEndTime: string
-    ) => {
-        if (!user) {
-            setError('User not authenticated');
-            return null;
-        }
+    /**
+     * Fetch on mount with guard to prevent double fetch and flicker.
+     */
+    useEffect(() => {
+        let isMounted = true;
 
+        const load = async () => {
+            const plan = await fetchTodayPlan();
+            if (!isMounted) return;
+            setCurrentPlan(plan || null);
+            setLoading(false);
+        };
+
+        load();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []); // Empty dependency array - mount once only
+
+    /**
+     * Checks if the current user has an ACTIVE work plan for today.
+     * Draft plans are not considered as "having a plan" to allow creation.
+     * 
+     * @returns boolean - true if ACTIVE work plan exists for today, false otherwise
+     */
+    const hasTodayWorkPlan = (): boolean => {
+        return currentPlan !== null && currentPlan.status === 'active';
+    };
+
+    /**
+     * Checks if the current user has an active work plan for today.
+     * 
+     * @returns boolean - true if active work plan exists, false otherwise
+     */
+    const hasActiveWorkPlan = (): boolean => {
+        return currentPlan !== null && currentPlan.status === 'active';
+    };
+
+    /**
+     * Creates a new daily work plan with planned leads.
+     * 
+     * @param plannedLeads - Array of leads with sequence and metadata
+     * @param startTime - Expected start time (NOT STORED - columns don't exist)
+     * @param endTime - Expected end time (NOT STORED - columns don't exist)
+     * @returns boolean - true if successful, false otherwise
+     */
+    const createWorkPlan = async (
+        plannedLeads: PlannedLead[],
+        startTime: string,
+        endTime: string
+    ): Promise<boolean> => {
         setLoading(true);
         setError(null);
 
-        const today = new Date().toISOString().split('T')[0];
-
         try {
-            // 1. Resolve business_ids to UUIDs
-            const businessIds = plannedLeads.map(p => p.lead_id);
-            const { data: leadsData, error: leadsError } = await (supabase as any)
-                .from('leads')
-                .select('id, business_id')
-                .in('business_id', businessIds);
-
-            if (leadsError) {
-                console.error('Error resolving business IDs:', leadsError);
-                throw leadsError;
+            // Check authentication
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                throw new Error('User not authenticated');
             }
 
-            // Map business_id to UUID
-            const leadMap = new Map();
-            leadsData?.forEach((l: any) => leadMap.set(l.business_id, l.id));
-
-            const meetingsToInsert = [];
-            const resolvedPointsForJson = [];
-
-            for (const p of plannedLeads) {
-                const uuid = leadMap.get(p.lead_id);
-                if (!uuid) {
-                    console.warn(`Lead not found for business_id: ${p.lead_id}`);
-                    continue; // Skip invalid leads
-                }
-
-                // Prepare meeting record
-                meetingsToInsert.push({
-                    // work_plan_id will be added later
-                    lead_id: uuid,
-                    sequence: p.sequence,
-                    objective: p.objective || 'Intro',
-                    priority: p.priority || 'med',
-                    expected_value: p.expected_value || 0,
-                    status: 'pending'
-                });
-
-                // Prepare JSON record (keep original business_id or use UUID? keeping original input is usually better for reference, but UUID is safer)
-                // User said: "Use UUID id in planned_leads"
-                resolvedPointsForJson.push({
-                    ...p,
-                    lead_id: uuid // Replace business_id with UUID in the JSON storage as requested
-                });
+            // Validate input
+            if (!plannedLeads || plannedLeads.length === 0) {
+                throw new Error('No leads provided for work plan');
             }
 
-            if (meetingsToInsert.length === 0) {
-                throw new Error('No valid leads found to create plan.');
-            }
+            // Create the work plan using EXACT schema
+            const today = new Date().toISOString().split('T')[0];
 
-            // 2. Prepare JSON structure for planned_route
-            const plannedRouteJson = {
-                start_time: expectedStartTime,
-                end_time: expectedEndTime,
-                points: resolvedPointsForJson
-            };
-
-            // 3. Insert the main work plan record
-            // NOTE: removing expected_start_time and expected_end_time columns
-            const { data: plan, error: planError } = await (supabase as any)
+            const { data: workPlan, error: planError } = await (supabase as any)
                 .from('daily_work_plans')
                 .insert({
-                    staff_id: user.id,
                     date: today,
-                    status: 'draft',
-                    planned_route: plannedRouteJson
+                    planned_leads: plannedLeads,
+                    status: 'active'
+                    // staff_id set by DB trigger
+                    // Note: expected_start_time and expected_end_time columns do not exist
                 })
                 .select()
                 .single();
 
             if (planError) {
-                console.error('Error creating daily_work_plans:', planError);
-                throw planError;
+                console.error('Work plan creation error:', planError);
+                throw new Error(planError.message || 'Failed to create work plan');
             }
 
-            // 4. Insert relational meetings
-            const finalMeetings = meetingsToInsert.map(m => ({
-                work_plan_id: plan.id,
-                ...m
-            }));
-
-            const { error: mError } = await (supabase as any)
-                .from('work_plan_meetings')
-                .insert(finalMeetings);
-
-            if (mError) {
-                console.error('Error creating work_plan_meetings:', mError);
-                throw mError;
+            if (!workPlan) {
+                throw new Error('Work plan created but no data returned');
             }
 
-            await fetchTodayPlan(); // Refresh full relational data
+            // Refresh current plan
+            const refreshedPlan = await fetchTodayPlan();
+            if (refreshedPlan) {
+                setCurrentPlan(refreshedPlan);
+            }
+
             return true;
+
         } catch (err: any) {
-            console.error('createWorkPlan Exception:', err);
-            setError(err.message || 'Failed to create work plan');
+            console.error('Create work plan error:', err);
+            setError(err.message || 'An unexpected error occurred');
             return false;
         } finally {
             setLoading(false);
         }
     };
 
-    const activateWorkPlan = async (planId: string) => {
-        if (!user) return false;
+    /**
+     * Updates an existing work plan with new planned leads.
+     * Used for manual route addition.
+     */
+    const updateWorkPlan = async (plannedLeads: PlannedLead[]): Promise<boolean> => {
+        if (!currentPlan) return false;
+
         try {
-            const { error: err } = await (supabase as any)
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('User not authenticated');
+
+            const { error: updateError } = await (supabase as any)
                 .from('daily_work_plans')
-                .update({ status: 'active', activated_at: new Date().toISOString() })
-                .eq('id', planId);
-            if (err) throw err;
-            await fetchTodayPlan();
-            return true;
-        } catch (err: any) {
-            setError(err.message);
-            return false;
-        }
-    };
+                .update({ planned_leads: plannedLeads })
+                .eq('id', currentPlan.id);
 
-    const completeWorkPlan = async (planId: string) => {
-        if (!user) return false;
-        try {
-            const { error: err } = await (supabase as any)
-                .from('daily_work_plans')
-                .update({ status: 'completed', completed_at: new Date().toISOString() })
-                .eq('id', planId);
-            if (err) throw err;
-            await fetchTodayPlan();
-            return true;
-        } catch (err: any) {
-            setError(err.message);
-            return false;
-        }
-    };
-
-    const addMeeting = async (meeting: {
-        lead_id: string; // business_id expected from UI
-        sequence: number;
-        objective?: string;
-        expected_value?: number;
-        priority?: 'low' | 'med' | 'high';
-    }) => {
-        if (!user || !currentPlan) return false;
-
-        try {
-            // Resolve business_id
-            const { data: leadData, error: leadError } = await (supabase as any)
-                .from('leads')
-                .select('id')
-                .eq('business_id', meeting.lead_id)
-                .single();
-
-            if (leadError || !leadData) {
-                throw new Error('Lead not found for business ID: ' + meeting.lead_id);
+            if (updateError) {
+                console.error('[WORKPLAN] Update error:', updateError);
+                return false;
             }
 
-            const { error: mError } = await (supabase as any)
-                .from('work_plan_meetings')
-                .insert({
-                    work_plan_id: currentPlan.id,
-                    lead_id: leadData.id,
-                    sequence: meeting.sequence,
-                    objective: meeting.objective || 'Intro',
-                    priority: meeting.priority || 'med',
-                    expected_value: meeting.expected_value || 0,
-                    status: 'pending'
-                });
+            // Refresh local state
+            const refreshedPlan = await fetchTodayPlan();
+            if (refreshedPlan) {
+                setCurrentPlan(refreshedPlan);
+            }
 
-            if (mError) throw mError;
-            await fetchTodayPlan();
             return true;
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            console.error('[WORKPLAN] Update failed:', err);
             return false;
         }
     };
-
-    const hasActiveWorkPlan = () => currentPlan?.status === 'active';
-    const hasTodayWorkPlan = () => currentPlan !== null;
 
     return {
         currentPlan,
+        hasTodayWorkPlan,
+        hasActiveWorkPlan,
+        createWorkPlan,
+        updateWorkPlan,
         loading,
         error,
-        fetchTodayPlan,
-        createWorkPlan,
-        activateWorkPlan,
-        completeWorkPlan,
-        addMeeting,
-        hasActiveWorkPlan,
-        hasTodayWorkPlan,
+        fetchTodayPlan, // Expose for manual refresh
     };
 };

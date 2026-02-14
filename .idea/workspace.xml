@@ -1,8 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;settings.editor.selected.configurable&quot;: &quot;AndroidSdkUpdater&quot;
-  }
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="3ea37ba1-d56c-4ca8-8c15-91bdd8245360" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/mobile-app/(" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/({" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/[" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/a.id" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/handleAreaSelect(point.id" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/p.id" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/p.lead_id" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/selectLead(point.id" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/selectedAreaForPoint[point.id]" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/setActiveAreaPicker(point.id)}" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/sum" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/updateRoutePoint(point.id" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/mobile-app/{" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/supabase/migrations/20260212_lead_business_ids.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/app/add-lead.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/app/add-lead.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/app/daily-work-plan.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/app/daily-work-plan.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/app/my-route.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/app/my-route.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/src/hooks/useAttendance.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/src/hooks/useAttendance.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/src/hooks/useCRM.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/src/hooks/useCRM.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/src/hooks/useDailyWorkPlan.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/src/hooks/useDailyWorkPlan.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile-app/src/hooks/useOfflineQueue.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile-app/src/hooks/useOfflineQueue.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
 }</component>
+  <component name="ProjectId" id="39bOLFN5C2tYN8ZMoSM4V3a8JnN" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/arspl-sales-performance-tracker-git-ready",
+    "settings.editor.selected.configurable": "AndroidSdkUpdater"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="3ea37ba1-d56c-4ca8-8c15-91bdd8245360" name="Changes" comment="" />
+      <created>1770961254744</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1770961254744</updated>
+    </task>
+    <servers />
+  </component>
 </project>

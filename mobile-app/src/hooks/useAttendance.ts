@@ -40,28 +40,46 @@ export function useAttendance() {
         if (selfieUri) {
             try {
                 const fileName = `selfie_${user.id}_${Date.now()}.jpg`;
-                const formData = new FormData();
-                formData.append('file', {
-                    uri: selfieUri,
-                    name: fileName,
-                    type: 'image/jpeg',
-                } as any);
+                const bucketName = 'attendance-proofs';
+
+                console.log('[SELFIE] Uploading to bucket:', bucketName);
+                console.log('[SELFIE] File name:', fileName);
+                console.log('[SELFIE] URI:', selfieUri);
+
+                // Fetch the file as blob for React Native
+                const response = await fetch(selfieUri);
+                const blob = await response.blob();
 
                 const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('attendance-proofs')
-                    .upload(fileName, formData);
+                    .from(bucketName)
+                    .upload(fileName, blob, {
+                        contentType: 'image/jpeg',
+                        cacheControl: '3600',
+                        upsert: true
+                    });
 
-                if (uploadError) throw uploadError;
+                if (uploadError) {
+                    console.error('[SELFIE] Upload error:', uploadError);
+                    console.error('[SELFIE] Error code:', uploadError.statusCode);
+                    console.error('[SELFIE] Error message:', uploadError.message);
+                    throw uploadError;
+                }
+
+                console.log('[SELFIE] Upload successful:', uploadData);
 
                 const { data: { publicUrl } } = supabase.storage
-                    .from('attendance-proofs')
+                    .from(bucketName)
                     .getPublicUrl(fileName);
 
                 selfieUrl = publicUrl;
+                console.log('[SELFIE] Public URL:', publicUrl);
+
             } catch (err: any) {
-                console.error('Selfie upload failed:', err);
-                // Continue with clock-in even if selfie upload fails, or block it? 
-                // For now, let's just log and continue or block based on requirements.
+                console.error('[SELFIE] Upload failed:', err);
+                console.error('[SELFIE] Error details:', JSON.stringify(err, null, 2));
+                console.warn('[SELFIE] Continuing clock-in without selfie');
+                // Continue with clock-in even if selfie upload fails
+                selfieUrl = null;
             }
         }
 

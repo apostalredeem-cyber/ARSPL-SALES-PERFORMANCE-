@@ -24,6 +24,15 @@ export default function DailyWorkPlanScreen() {
     // const { leads: assignedLeads } = useLeads(); // Unused currently
     const { areas, fetchAreas, fetchLeadsInArea, loading: crmLoading } = useCRM();
 
+    // Loading guard to prevent flicker
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+        );
+    }
+
     const [routePoints, setRoutePoints] = useState<RoutePoint[]>([
         { id: '1', lead_id: '', name: '', sequence: 1, client_type: 'Retailer', objective: 'Intro', expected_value: '', priority: 'med' }
     ]);
@@ -152,12 +161,18 @@ export default function DailyWorkPlanScreen() {
     };
 
     const selectLead = (pointId: string, lead: any) => {
-        // Validation: Must have a business_id if we have migrated.
-        const idToUse = lead.business_id || lead.id;
-
-        if (!idToUse) {
-            console.warn('Selected lead has no ID/BusinessID', lead);
+        // CRITICAL: Use UUID (lead.id) for relational fields, NOT business_id
+        if (!lead.id) {
+            console.warn('Selected lead has no UUID', lead);
             return;
+        }
+
+        // Dev-mode warning for pending leads
+        if (__DEV__ && lead.isPending) {
+            console.warn(
+                `[DEV WARNING] Selected pending lead: ${lead.name} (${lead.id}). ` +
+                `Work plan activation will be blocked until this lead syncs to server.`
+            );
         }
 
         setRoutePoints((prev: RoutePoint[]) =>
@@ -165,7 +180,7 @@ export default function DailyWorkPlanScreen() {
                 p.id === pointId
                     ? {
                         ...p,
-                        lead_id: String(idToUse),
+                        lead_id: lead.id, // Use UUID, not business_id
                         name: lead.name,
                         client_type: lead.client_type || p.client_type,
                         expected_value:
@@ -200,6 +215,29 @@ export default function DailyWorkPlanScreen() {
 
         if (!startTime || !endTime) {
             Alert.alert('Validation Error', 'Please set expected start and end times.');
+            return;
+        }
+
+        // CRITICAL: Check for pending/offline leads
+        const selectedLeadIds = validPoints.map(p => p.lead_id);
+        const hasPendingLeads = selectedLeadIds.some(leadId => {
+            // Check if this lead is in tempLeads and marked as pending
+            for (const pointId in tempLeads) {
+                const leads = tempLeads[pointId] || [];
+                const lead = leads.find(l => l.id === leadId);
+                if (lead && lead.isPending) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (hasPendingLeads) {
+            Alert.alert(
+                'Sync Required',
+                'Some selected parties are pending sync. Please ensure you have internet connection and wait for sync to complete before activating your work plan.',
+                [{ text: 'OK' }]
+            );
             return;
         }
 
@@ -298,9 +336,18 @@ export default function DailyWorkPlanScreen() {
                                                 style={styles.leadOption}
                                                 onPress={() => selectLead(point.id, lead)}
                                             >
-                                                <Text style={styles.leadOptionName}>{lead.name}</Text>
-                                                <Text style={styles.leadOptionType}>{lead.client_type} • {lead.phone_number}</Text>
-                                                {lead.business_id && <Text style={[styles.leadOptionType, { fontSize: 10 }]}>{lead.business_id}</Text>}
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={styles.leadOptionName}>{lead.name}</Text>
+                                                        <Text style={styles.leadOptionType}>{lead.client_type} • {lead.phone_number}</Text>
+                                                        {lead.business_id && <Text style={[styles.leadOptionType, { fontSize: 10 }]}>{lead.business_id}</Text>}
+                                                    </View>
+                                                    {lead.isPending && (
+                                                        <View style={{ backgroundColor: '#f59e0b', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                                            <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>PENDING</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
                                             </TouchableOpacity>
                                         ))
                                     )}
@@ -665,5 +712,15 @@ const styles = StyleSheet.create({
         borderTopColor: '#27272a',
         marginTop: 8,
     },
-    addPartyText: { color: '#3b82f6', fontWeight: 'bold', fontSize: 14 },
+    addPartyText: {
+        color: '#3b82f6',
+        fontWeight: 'bold',
+        fontSize: 14
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#09090b',
+    },
 });

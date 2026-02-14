@@ -1,12 +1,26 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useOfflineQueue } from './useOfflineQueue';
-import * as Network from 'expo-network';
+import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 
 const AREAS_STORAGE_KEY = 'arspl_cached_areas';
+
+// UUID Utilities
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
+const isValidUUID = (uuid: string): boolean => {
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return regex.test(uuid);
+};
 
 export interface Area {
   id: string;
@@ -32,19 +46,16 @@ export interface Lead {
 
 export const useCRM = () => {
   const { user } = useAuth();
-  const { pushAction, queue } = useOfflineQueue();
+  const { pushAction, queue, popAction } = useOfflineQueue();
 
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Use a ref to track mounting status to avoid state updates on unmounted components
   const isMounted = useRef(true);
-
-  const isOnline = async () => {
-    const state = await Network.getNetworkStateAsync();
-    return !!(state.isConnected && state.isInternetReachable);
-  };
 
   const fetchAreas = useCallback(async () => {
     if (!isMounted.current) return;
@@ -63,7 +74,7 @@ export const useCRM = () => {
         .filter((a: any) => a.type === 'ADD_AREA')
         .map((a: any) => ({
           ...a.payload,
-          id: a.id,
+          id: a.id || generateUUID(), // Ensure UUID format
           isPending: true,
         }));
 
@@ -97,12 +108,12 @@ export const useCRM = () => {
 
     try {
       const payload = { name: name.trim(), city: city?.trim() };
-      const online = await isOnline();
 
-      if (!online) {
-        await pushAction('ADD_AREA', payload);
+      if (!isOnline) {
+        const tempId = generateUUID();
+        await pushAction('ADD_AREA', { ...payload, id: tempId });
         await fetchAreas(); // Refresh to show pending
-        return { id: 'pending', ...payload, isPending: true };
+        return { id: tempId, ...payload, isPending: true };
       }
 
       const { data, error: insertError } = await (supabase as any)
@@ -153,11 +164,10 @@ export const useCRM = () => {
         client_type: leadData.client_type || 'Retailer',
       };
 
-      const online = await isOnline();
-
-      if (!online) {
+      if (!isOnline) {
+        const tempId = generateUUID();
         await pushAction('ADD_LEAD', payload);
-        return { id: `temp_${Date.now()}`, ...payload, isPending: true, business_id: 'PENDING' };
+        return { id: tempId, ...payload, isPending: true, business_id: 'PENDING' };
       }
 
       // Insert and return single row
@@ -193,6 +203,22 @@ export const useCRM = () => {
     // local loading state in component is better
 
     try {
+      // UUID Guard: Block non-UUID values from reaching Supabase
+      if (!isValidUUID(areaId)) {
+        console.warn(`[useCRM] Blocked non-UUID area_id from Supabase query: ${areaId}`);
+        // Return only pending leads for this non-UUID area
+        const pendingLeads = queue
+          .filter((a: any) => a.type === 'ADD_LEAD' && a.payload.area_id === areaId)
+          .map((a: any) => ({
+            ...a.payload,
+            id: a.id || generateUUID(),
+            business_id: 'PENDING',
+            isPending: true,
+            areas: areas.find(area => area.id === areaId)
+          }));
+        return pendingLeads;
+      }
+
       const { data, error } = await supabase
         .from('leads')
         .select('*, areas(*)')
@@ -206,7 +232,7 @@ export const useCRM = () => {
         .filter((a: any) => a.type === 'ADD_LEAD' && a.payload.area_id === areaId)
         .map((a: any) => ({
           ...a.payload,
-          id: `pending_${Math.random().toString(36).substr(2, 9)}`,
+          id: a.id || generateUUID(),
           business_id: 'PENDING',
           isPending: true,
           areas: areas.find(area => area.id === areaId) // Mock the relation
@@ -214,9 +240,13 @@ export const useCRM = () => {
 
       // Convert data to ensure consistent shape if needed
       const serverLeads = data || [];
+      const serverPhones = new Set(serverLeads.map((l: any) => l.phone_number));
+
+      // Deduplicate: Filter pending leads that are already in server response (by phone)
+      const uniquePending = pendingLeads.filter((p: any) => !serverPhones.has(p.phone_number));
 
       // Combine: Pending first so user sees them
-      return [...pendingLeads, ...serverLeads];
+      return [...uniquePending, ...serverLeads];
 
     } catch (err) {
       console.error('Error fetching leads:', err);
@@ -225,7 +255,7 @@ export const useCRM = () => {
         .filter((a: any) => a.type === 'ADD_LEAD' && a.payload.area_id === areaId)
         .map((a: any) => ({
           ...a.payload,
-          id: `pending_${Math.random().toString(36).substr(2, 9)}`,
+          id: a.id || generateUUID(),
           business_id: 'PENDING',
           isPending: true,
           areas: areas.find(area => area.id === areaId)
@@ -233,6 +263,190 @@ export const useCRM = () => {
       return pendingLeads;
     }
   };
+
+  // SYNC ENGINE: Process offline queue with idempotent behavior
+  const processQueue = useCallback(async () => {
+    if (isSyncing) {
+      console.log('[SYNC] Already syncing, skipping...');
+      return;
+    }
+
+    if (queue.length === 0) {
+      console.log('[SYNC] Queue is empty, nothing to sync');
+      return;
+    }
+
+    if (!isOnline) {
+      console.log('[SYNC] Offline, cannot sync');
+      return;
+    }
+
+    console.log(`[SYNC] Starting queue processing. Queue length: ${queue.length}`);
+    setIsSyncing(true);
+
+    let successCount = 0;
+    let skipCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (let i = 0; i < queue.length; i++) {
+        const action = queue[i];
+        console.log(`[SYNC] Processing action ${i + 1}/${queue.length}:`, action.type);
+
+        try {
+          if (action.type === 'ADD_AREA') {
+            console.log('[SYNC] Inserting area:', action.payload.name);
+
+            // No UUID validation needed for areas (no foreign keys)
+
+            const { data, error } = await (supabase as any)
+              .from('areas')
+              .insert({
+                name: action.payload.name,
+                city: action.payload.city,
+                created_by: user?.id,
+              })
+              .select()
+              .single();
+
+            if (error) {
+              // Check if duplicate (unique constraint violation)
+              if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+                console.log('[SYNC] Area already exists (duplicate), treating as success');
+                await popAction(action.id);
+                skipCount++;
+                continue;
+              }
+              throw error;
+            }
+
+            console.log('[SYNC] Area inserted successfully:', data.id);
+            await popAction(action.id);
+            successCount++;
+
+          } else if (action.type === 'ADD_LEAD') {
+            console.log('[SYNC] Inserting lead:', action.payload.name);
+
+            // UUID VALIDATION: Verify area_id is valid UUID
+            if (!isValidUUID(action.payload.area_id)) {
+              console.error('[SYNC] Invalid UUID for area_id:', action.payload.area_id);
+              console.error('[SYNC] Skipping lead sync - invalid foreign key');
+              await popAction(action.id);
+              errorCount++;
+              continue;
+            }
+
+            const { data, error } = await (supabase as any)
+              .from('leads')
+              .insert({
+                name: action.payload.name,
+                phone_number: action.payload.phone_number,
+                area_id: action.payload.area_id,
+                address: action.payload.address,
+                latitude: action.payload.latitude,
+                longitude: action.payload.longitude,
+                client_type: action.payload.client_type,
+                expected_value: action.payload.expected_value,
+                created_by: user?.id,
+              })
+              .select()
+              .single();
+
+            if (error) {
+              // Check if duplicate (unique constraint violation on phone_number)
+              if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+                console.log('[SYNC] Lead already exists (duplicate phone), treating as success');
+                await popAction(action.id);
+                skipCount++;
+                continue;
+              }
+              throw error;
+            }
+
+            console.log('[SYNC] Lead inserted successfully:', data.id);
+            await popAction(action.id);
+            successCount++;
+          }
+
+        } catch (actionError: any) {
+          console.error(`[SYNC] Failed to sync action ${i + 1}:`, actionError.message);
+
+          // Only stop for critical errors
+          const isCriticalError =
+            actionError.message?.includes('JWT') ||
+            actionError.message?.includes('auth') ||
+            actionError.message?.includes('network') ||
+            actionError.message?.includes('fetch') ||
+            actionError.code === 'PGRST301' || // JWT expired
+            actionError.code === 'PGRST204'; // No connection
+
+          if (isCriticalError) {
+            console.error('[SYNC] Critical error detected, stopping queue processing');
+            errorCount++;
+            break;
+          } else {
+            // Non-critical error: log and continue
+            console.warn('[SYNC] Non-critical error, removing action and continuing');
+            await popAction(action.id);
+            errorCount++;
+          }
+        }
+      }
+
+      console.log(`[SYNC] Queue processing complete. Success: ${successCount}, Skipped: ${skipCount}, Errors: ${errorCount}`);
+
+      // Refresh areas after sync
+      if (successCount > 0 || skipCount > 0) {
+        await fetchAreas();
+      }
+
+    } catch (err: any) {
+      console.error('[SYNC] Queue processing fatal error:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [queue, isOnline, isSyncing, user, popAction, fetchAreas]);
+
+  // Network detection and auto-sync (mounts only once)
+  useEffect(() => {
+    console.log('[SYNC] Setting up network listener');
+    let isSubscribed = true;
+
+    // Subscribe to network state changes
+    const unsubscribe = NetInfo.addEventListener((state: any) => {
+      if (!isSubscribed) return;
+
+      const online = !!(state.isConnected && state.isInternetReachable);
+      console.log('[SYNC] Network state changed. Online:', online);
+      setIsOnline(online);
+
+      // Trigger sync when coming online
+      if (online && queue.length > 0) {
+        console.log('[SYNC] Network restored, triggering sync...');
+        setTimeout(() => processQueue(), 500); // Debounce
+      }
+    });
+
+    // Initial network check and sync attempt
+    NetInfo.fetch().then((state: any) => {
+      if (!isSubscribed) return;
+
+      const online = !!(state.isConnected && state.isInternetReachable);
+      console.log('[SYNC] Initial network check. Online:', online);
+      setIsOnline(online);
+
+      if (online && queue.length > 0) {
+        console.log('[SYNC] App started with pending queue, triggering sync...');
+        setTimeout(() => processQueue(), 1000); // Delay to avoid mount race
+      }
+    });
+
+    return () => {
+      console.log('[SYNC] Cleaning up network listener');
+      isSubscribed = false;
+      unsubscribe();
+    };
+  }, []); // Empty deps - mount once only
 
   // Initial load
   useFocusEffect(
@@ -259,5 +473,8 @@ export const useCRM = () => {
     addLead,
     fetchLeadsInArea,
     pendingCount: queue.length,
+    isOnline,
+    isSyncing,
+    forceSync: processQueue, // Manual sync trigger
   };
 };
