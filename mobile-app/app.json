@@ -71,9 +71,7 @@
       "router": {},
       "eas": {
         "projectId": "da3a0a09-3f69-45e9-8444-0a059e14ef5e"
-      },
-      "EXPO_PUBLIC_SUPABASE_URL": "https://xvzmduojhxkpigdbayqp.supabase.co",
-      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2em1kdW9qaHhrcGlnZGJheXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMjIzNDAsImV4cCI6MjA4NTg5ODM0MH0.8wnqjo7XbDQT5dzk24HNvIX0mTuCN3zKer82Yy2UqOI"
+      }
     },
     "owner": "arsplsales"
   }
