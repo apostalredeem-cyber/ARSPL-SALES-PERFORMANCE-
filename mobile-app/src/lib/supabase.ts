@@ -1,38 +1,28 @@
-import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
-import * as SecureStore from 'expo-secure-store'
-import type { Database } from '../types/supabase'
-import { AppState } from 'react-native'
+import Constants from 'expo-constants'
 
-const LargeSecureStore = {
-    getItem: (key: string) => {
-        return SecureStore.getItemAsync(key)
-    },
-    setItem: (key: string, value: string) => {
-        SecureStore.setItemAsync(key, value)
-    },
-    removeItem: (key: string) => {
-        SecureStore.deleteItemAsync(key)
-    },
-}
+const extra = Constants.expoConfig?.extra ?? {}
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl =
+    process.env.EXPO_PUBLIC_SUPABASE_URL ??
+    extra.EXPO_PUBLIC_SUPABASE_URL
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        storage: LargeSecureStore,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-    },
-})
+const supabaseAnonKey =
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ??
+    extra.EXPO_PUBLIC_SUPABASE_ANON_KEY
 
-// Automatically refresh session when app comes to foreground
-AppState.addEventListener('change', (state) => {
-    if (state === 'active') {
-        supabase.auth.startAutoRefresh()
-    } else {
-        supabase.auth.stopAutoRefresh()
+console.log('SUPABASE URL:', supabaseUrl)
+console.log('SUPABASE KEY EXISTS:', !!supabaseAnonKey)
+console.log('SUPABASE KEY LENGTH:', supabaseAnonKey?.length)
+
+export const supabase = createClient(
+    supabaseUrl as string,
+    supabaseAnonKey as string,
+    {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false
+        }
     }
-})
+)

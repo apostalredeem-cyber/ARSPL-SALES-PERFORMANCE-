@@ -22,6 +22,7 @@
     },
     "android": {
       "package": "com.arspl.mobileapp",
+      "usesCleartextTraffic": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/arspl_logo.png",
         "backgroundColor": "#ffffff"
@@ -29,6 +30,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
+        "INTERNET",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
@@ -54,7 +56,6 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-dev-client",
       "expo-secure-store",
       "expo-router",
       [
@@ -63,13 +64,16 @@
           "locationAlwaysAndWhenInUsePermission": "Allow ARSPL Tracker to access your location always for duty logs.",
           "isAndroidBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},
       "eas": {
         "projectId": "da3a0a09-3f69-45e9-8444-0a059e14ef5e"
-      }
+      },
+      "EXPO_PUBLIC_SUPABASE_URL": "https://xvzmduojhxkpigdbayqp.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2em1kdW9qaHhrcGlnZGJheXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMjIzNDAsImV4cCI6MjA4NTg5ODM0MH0.8wnqjo7XbDQT5dzk24HNvIX0mTuCN3zKer82Yy2UqOI"
     },
     "owner": "arsplsales"
   }
