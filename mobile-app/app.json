@@ -37,7 +37,12 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -63,8 +68,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "8bf07c97-4a06-4cbc-9914-13147ec13bd8"
+        "projectId": "da3a0a09-3f69-45e9-8444-0a059e14ef5e"
       }
-    }
+    },
+    "owner": "arsplsales"
   }
 }
