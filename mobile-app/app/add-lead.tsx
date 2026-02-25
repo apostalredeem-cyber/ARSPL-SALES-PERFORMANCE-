@@ -91,10 +91,7 @@ export default function AddLeadScreen() {
         name: name.trim(),
         phone_number: phone.trim(),
         area_id: areaId,
-        address: address || undefined,
-        latitude: lat || undefined,
-        longitude: lng || undefined,
-        client_type: 'Retailer', // Default, could be added to UI later
+        expected_value: 0,
       });
 
       if (!res) {

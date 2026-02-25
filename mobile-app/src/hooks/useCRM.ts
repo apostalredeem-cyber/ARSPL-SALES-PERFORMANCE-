@@ -152,17 +152,24 @@ export const useCRM = () => {
     setError(null);
 
     try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setError('Authentication required.');
+        return null;
+      }
+
+      // Only columns that exist in the leads table schema
       const payload = {
         name: leadData.name.trim(),
         phone_number: leadData.phone_number.trim(),
         area_id: leadData.area_id,
-        latitude: leadData.latitude,
-        longitude: leadData.longitude,
-        address: leadData.address?.trim(),
-        assigned_staff_id: user.id,
-        created_by: user.id, // Explicitly set for RLS `check (auth.uid() = created_by)`
-        client_type: leadData.client_type || 'Retailer',
+        status: 'New Lead',
+        expected_value: leadData.expected_value || 0,
+        assigned_staff_id: authUser.id,
+        created_by: authUser.id,
       };
+
+      console.log('Insert payload:', payload);
 
       if (!isOnline) {
         const tempId = generateUUID();
@@ -177,7 +184,9 @@ export const useCRM = () => {
         .select()
         .single();
 
+      console.log('Insert payload:', payload);
       if (insertError) {
+        console.error('Supabase error:', insertError);
         if (insertError.code === '23505') {
           return { error: 'duplicate' };
         }
@@ -187,9 +196,7 @@ export const useCRM = () => {
       return data; // Returns the full row with business_id
 
     } catch (err: any) {
-      console.error('Add Lead Error:', err);
-      // Fallback: queue it if it was a network error, otherwise return null
-      // For now, simple error return
+      console.error('Supabase error:', err);
       return null;
     } finally {
       setLoading(false);
@@ -219,13 +226,23 @@ export const useCRM = () => {
         return pendingLeads;
       }
 
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        console.error('Supabase error: No authenticated user for fetchLeadsInArea');
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('leads')
         .select('*, areas(*)')
         .eq('area_id', areaId)
+        .eq('assigned_staff_id', authUser.id)
         .order('name');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
       // Merge pending leads from offline queue
       const pendingLeads = queue
@@ -336,21 +353,28 @@ export const useCRM = () => {
               continue;
             }
 
+            // Only columns that exist in the leads table schema
+            const leadPayload = {
+              name: action.payload.name,
+              phone_number: action.payload.phone_number,
+              area_id: action.payload.area_id,
+              status: action.payload.status || 'New Lead',
+              expected_value: action.payload.expected_value || 0,
+              assigned_staff_id: user?.id,
+              created_by: user?.id,
+            };
+
+            console.log('Insert payload:', leadPayload);
+
             const { data, error } = await (supabase as any)
               .from('leads')
-              .insert({
-                name: action.payload.name,
-                phone_number: action.payload.phone_number,
-                area_id: action.payload.area_id,
-                address: action.payload.address,
-                latitude: action.payload.latitude,
-                longitude: action.payload.longitude,
-                client_type: action.payload.client_type,
-                expected_value: action.payload.expected_value,
-                created_by: user?.id,
-              })
+              .insert(leadPayload)
               .select()
               .single();
+
+            if (error) {
+              console.error('Supabase error:', error);
+            }
 
             if (error) {
               // Check if duplicate (unique constraint violation on phone_number)

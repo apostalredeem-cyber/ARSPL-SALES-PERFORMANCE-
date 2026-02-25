@@ -26,20 +26,25 @@ TaskManager.defineTask(LOCATION_TRACKING_TASK, async ({ data, error }: TaskManag
                 // Convert coordinates to PostGIS POINT format (WKT)
                 const point = `POINT(${location.coords.longitude} ${location.coords.latitude})`;
 
+                const gpsPayload = {
+                    user_id: user.id,
+                    location: point,
+                    heading: location.coords.heading,
+                    speed: location.coords.speed,
+                    accuracy: location.coords.accuracy,
+                    battery_level: 0, // Battery info requires expo-battery, can add later
+                    is_mocked: location.mocked || false,
+                    timestamp: new Date(location.timestamp).toISOString(),
+                };
+
+                console.log('Insert payload:', gpsPayload);
+
                 const { error: insertError } = await supabase
                     .from('gps_logs')
-                    .insert({
-                        user_id: user.id,
-                        location: point,
-                        heading: location.coords.heading,
-                        speed: location.coords.speed,
-                        accuracy: location.coords.accuracy,
-                        battery_level: 0, // Battery info requires expo-battery, can add later
-                        is_mocked: location.mocked || false,
-                        timestamp: new Date(location.timestamp).toISOString(),
-                    } as any);
+                    .insert(gpsPayload as any);
 
                 if (insertError) {
+                    console.error('Supabase error:', insertError);
                     console.error('Error logging GPS in background:', insertError.message);
                 }
             } catch (err) {

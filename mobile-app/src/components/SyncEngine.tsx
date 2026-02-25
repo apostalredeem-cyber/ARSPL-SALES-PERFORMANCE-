@@ -25,11 +25,28 @@ export const SyncEngine = () => {
                 error = result.error;
                 data = result.data?.[0];
             } else if (action.type === 'ADD_LEAD') {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    console.error('SyncEngine: No authenticated user, skipping lead insert');
+                    return false;
+                }
+                // Only columns that exist in the leads table schema
+                const leadPayload = {
+                    name: action.payload.name,
+                    phone_number: action.payload.phone_number,
+                    area_id: action.payload.area_id,
+                    status: action.payload.status || 'New Lead',
+                    expected_value: action.payload.expected_value || 0,
+                    assigned_staff_id: user.id,
+                    created_by: user.id,
+                };
+                console.log('Insert payload:', leadPayload);
                 const result = await (supabase as any)
                     .from('leads')
-                    .insert(action.payload)
+                    .insert(leadPayload)
                     .select();
                 error = result.error;
+                if (error) console.error('Supabase error:', error);
                 data = result.data?.[0];
             }
 

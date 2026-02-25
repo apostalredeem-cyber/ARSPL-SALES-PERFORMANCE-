@@ -13,13 +13,26 @@ export default function LoginScreen() {
     async function signInWithEmail() {
         setLoading(true);
         setError(null);
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email: email.trim().toLowerCase(),
+                password,
+            });
 
-        if (error) {
-            setError(error.message);
+            if (error) {
+                if (error.message.toLowerCase().includes('network') || error.message.toLowerCase().includes('fetch')) {
+                    setError('Network error: Please check your internet connection and try again.');
+                } else if (error.message.toLowerCase().includes('email not confirmed')) {
+                    setError('Email not confirmed. Please ask admin to confirm your account in Supabase.');
+                } else if (error.message.toLowerCase().includes('invalid login credentials')) {
+                    setError('Incorrect email or password. Please try again.');
+                } else {
+                    setError(error.message);
+                }
+                setLoading(false);
+            }
+        } catch (e: any) {
+            setError('Connection failed: ' + (e?.message ?? 'Unknown error. Check your internet.'));
             setLoading(false);
         }
     }

@@ -55,6 +55,7 @@ export const useTravelSummary = () => {
 
             setDailySummary(data);
         } catch (err: any) {
+            console.error('Supabase error:', err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -109,6 +110,7 @@ export const useTravelSummary = () => {
 
             setWeeklyDetails(detailsData || []);
         } catch (err: any) {
+            console.error('Supabase error:', err);
             setError(err.message);
         } finally {
             setLoading(false);
