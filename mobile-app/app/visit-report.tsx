@@ -17,6 +17,7 @@ export default function VisitReportScreen() {
     const [outcome, setOutcome] = useState<'Interested' | 'Quotation Given' | 'Order Confirmed' | 'No Interest' | null>(null);
     const [orderValue, setOrderValue] = useState('');
     const [expectedDate, setExpectedDate] = useState('');
+    const [followUpDate, setFollowUpDate] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
     const handleSubmit = async () => {
@@ -33,6 +34,13 @@ export default function VisitReportScreen() {
         setSubmitting(true);
 
         try {
+            // Determine next_action_date:
+            // - For Follow-up: use followUpDate chosen by employee
+            // - For Quotation: use expectedDate
+            const nextActionDate = outcome === 'Interested'
+                ? (followUpDate || undefined)
+                : (expectedDate || undefined);
+
             const reportData = {
                 meeting_id: meetingId as string,
                 status,
@@ -40,6 +48,7 @@ export default function VisitReportScreen() {
                 outcome: outcome || undefined,
                 order_value: parseFloat(orderValue) || 0,
                 expected_order_date: expectedDate || undefined,
+                next_action_date: nextActionDate,
             };
 
             const result = await submitReport(reportData);
@@ -165,11 +174,37 @@ export default function VisitReportScreen() {
                         </View>
                     )}
 
-                    {(outcome === 'Interested' || outcome === 'Quotation Given') && (
+                    {outcome === 'Interested' && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>FOLLOW-UP DATE</Text>
+                            <Text style={styles.sectionHint}>Party ne kab bulaya hai? Us date pe automatically work plan mein aayega.</Text>
+                            <View style={styles.inputCard}>
+                                <Feather name="calendar" size={20} color="#3b82f6" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="YYYY-MM-DD (e.g. 2026-02-27)"
+                                    placeholderTextColor="#52525b"
+                                    value={followUpDate}
+                                    onChangeText={setFollowUpDate}
+                                    keyboardType="numeric"
+                                />
+                            </View>
+                            {followUpDate.length === 10 && (
+                                <View style={styles.followUpConfirm}>
+                                    <Feather name="check-circle" size={14} color="#10b981" />
+                                    <Text style={styles.followUpConfirmText}>
+                                        {followUpDate} ko aapke work plan mein auto-add hoga
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {outcome === 'Quotation Given' && (
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>EXPECTED ORDER DATE</Text>
                             <View style={styles.inputCard}>
-                                <Feather name="trending-up" size={20} color="#3b82f6" style={styles.inputIcon} />
+                                <Feather name="trending-up" size={20} color="#8b5cf6" style={styles.inputIcon} />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="YYYY-MM-DD"
@@ -231,7 +266,10 @@ const styles = StyleSheet.create({
     leadTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
     leadSubtitle: { color: '#71717a', fontSize: 13, marginTop: 2 },
     section: { marginBottom: 24 },
-    sectionLabel: { fontSize: 11, fontWeight: 'bold', color: '#52525b', letterSpacing: 1, marginBottom: 12 },
+    sectionLabel: { fontSize: 11, fontWeight: 'bold', color: '#52525b', letterSpacing: 1, marginBottom: 4 },
+    sectionHint: { fontSize: 11, color: '#3b82f6', marginBottom: 10, marginLeft: 2 },
+    followUpConfirm: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 4 },
+    followUpConfirmText: { color: '#10b981', fontSize: 12, fontWeight: '500', flex: 1 },
     statusRow: { flexDirection: 'row', gap: 12 },
     statusOption: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#18181b', padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#27272a' },
     statusActive_ok: { backgroundColor: '#10b98110', borderColor: '#10b98150' },

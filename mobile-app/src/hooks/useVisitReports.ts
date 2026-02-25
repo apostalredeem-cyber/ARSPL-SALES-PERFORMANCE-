@@ -10,6 +10,7 @@ export interface VisitReportData {
     outcome?: 'Interested' | 'Quotation Given' | 'Order Confirmed' | 'No Interest';
     order_value?: number;
     expected_order_date?: string;
+    next_action_date?: string;  // Follow-up date — triggers auto work plan scheduling
     photo_url?: string;
 }
 
@@ -58,6 +59,7 @@ export const useVisitReports = () => {
                     outcome: reportData.outcome || null,
                     order_value: reportData.order_value || 0,
                     expected_order_date: reportData.expected_order_date || null,
+                    next_action_date: reportData.next_action_date || null,
                     photo_url: reportData.photo_url || null,
                     location: locationString
                 })
